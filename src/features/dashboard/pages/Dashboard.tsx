@@ -31,7 +31,7 @@ export const Dashboard = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [revenueTrend, setRevenueTrend] = useState<RevenueDataPoint[]>([]);
   const [consumptionTrend, setConsumptionTrend] = useState<ConsumptionDataPoint[]>([]);
-  const [recentBills, setRecentBills] = useState<Bill[]>([]);
+  const [recentBills] = useState<Bill[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingCharts, setLoadingCharts] = useState(true);
   const navigate = useNavigate();

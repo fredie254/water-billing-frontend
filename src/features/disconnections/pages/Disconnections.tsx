@@ -144,8 +144,7 @@ export const Disconnections = () => {
           await disconnectionsApi.approveReconnection(order.id, notes);
           break;
         case 'reconnected':
-          await disconnectionsApi.markReconnected({
-            id: order.id,
+          await disconnectionsApi.markReconnected(order.id, {
             reconnectedAt: new Date().toISOString(),
             performedBy,
             notes,

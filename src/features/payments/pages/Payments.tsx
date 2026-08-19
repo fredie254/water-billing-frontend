@@ -13,7 +13,6 @@ import { Badge } from '@/shared/components/ui/Badge';
 import { Modal } from '@/shared/components/ui/Modal';
 import { Input, Select } from '@/shared/components/ui/Input';
 import { paymentsApi } from '@/features/payments/api/payments';
-import { allocatePayment, generateReceiptNumber } from '@/features/payments/lib/paymentAllocation';
 import { formatCurrency, formatDate, cn } from '@/shared/utils/utils';
 import { fireNotification } from '@/core/store/notificationStore';
 import type { Payment, PaymentMethod, PaymentStatus } from '@/types';
@@ -79,7 +78,7 @@ export const Payments = () => {
   const [showRecord, setShowRecord] = useState(false);
   const [showStkPush, setShowStkPush] = useState(false);
   const [stkStatus, setStkStatus] = useState<'idle' | 'sending' | 'sent' | 'confirmed'>('idle');
-  const [stkCheckoutId, setStkCheckoutId] = useState<string | null>(null);
+  const [_stkCheckoutId, setStkCheckoutId] = useState<string | null>(null);
 
   // ── Fetch payments ──
   const fetchPayments = useCallback(async () => {
@@ -116,14 +115,11 @@ export const Payments = () => {
 
   const watchedMethod = watch('paymentMethod');
   const formAccount = watch('accountNumber');
-  const formAmount = watch('amount');
-
   // Allocation preview uses locally-fetched data; keep a lightweight resolve
   // from the already-loaded payments list (best-effort account lookup)
   const resolvedPayment = payments.find(
     (p) => p.accountNumber === formAccount?.trim(),
   );
-  const allocationResult = null; // Server handles allocation; preview removed for API mode
 
   const onRecordPayment = async (values: PaymentFormValues) => {
     try {

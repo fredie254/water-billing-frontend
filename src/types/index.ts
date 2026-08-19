@@ -471,8 +471,8 @@ export interface Connection {
 export type BillingCycle = 'monthly' | 'bi_monthly' | 'quarterly';
 
 export interface TariffBlock {
-  id: string;
-  tariffId: string;
+  id?: string;
+  tariffId?: string;
   fromUnits: number;
   toUnits: number | null;
   ratePerUnit: number;

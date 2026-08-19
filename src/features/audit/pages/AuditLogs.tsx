@@ -6,7 +6,7 @@ import {
 import { format } from 'date-fns';
 import { auditLogsApi } from '@/features/audit/api/auditLogs';
 import { usersApi } from '@/features/users/api/users';
-import type { AuditLog, AuditAction, User } from '@/types';
+import type { AuditLog, AuditAction, User, QueryParams } from '@/types';
 import { cn } from '@/shared/utils/utils';
 
 interface ActionMeta { label: string; color: string; icon: React.ReactNode }
@@ -117,8 +117,8 @@ export const AuditLogs = () => {
     if (dateFrom)     params.dateFrom = dateFrom;
     if (dateTo)       params.dateTo = dateTo + 'T23:59:59';
 
-    auditLogsApi.list(params)
-      .then(r => { setLogs(r.data ?? []); setTotal(r.total ?? 0); })
+    auditLogsApi.list(params as QueryParams)
+      .then(r => { setLogs(r.data ?? []); setTotal(r.pagination?.total ?? 0); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [page, search, actionFilter, userFilter, dateFrom, dateTo]);

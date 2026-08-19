@@ -14,7 +14,7 @@ import { notificationsApi } from '@/features/notifications/api/notifications';
 import { formatDateTime, cn } from '@/shared/utils/utils';
 import type {
   NotificationLog, NotificationTemplate,
-  NotificationEventType, NotificationChannel, NotificationDeliveryStatus,
+  NotificationEventType, NotificationChannel, NotificationDeliveryStatus, QueryParams,
 } from '@/types';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -102,8 +102,8 @@ export const Notifications = () => {
     if (search)                          params.search = search;
     if (channelFilter !== 'all')         params.channel = channelFilter;
     if (statusFilter !== 'all')          params.status = statusFilter;
-    notificationsApi.list(params)
-      .then(r => { setLogs(r.data ?? []); setLogTotal(r.total ?? 0); })
+    notificationsApi.list(params as QueryParams)
+      .then(r => { setLogs(r.data ?? []); setLogTotal(r.pagination?.total ?? 0); })
       .catch(() => {})
       .finally(() => setLogsLoading(false));
   }, [page, search, channelFilter, statusFilter]);

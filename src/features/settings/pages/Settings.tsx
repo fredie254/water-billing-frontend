@@ -71,7 +71,7 @@ export const Settings = () => {
   const [tab, setTab] = useState<Tab>('organisation');
 
   // ─── Remote settings state ──────────────────────────────────────────────────
-  const [settings, setSettings] = useState<AllSettings>({});
+  const [_settings, setSettings] = useState<AllSettings>({});
   const [loadingSettings, setLoadingSettings] = useState(false);
 
   // ─── Organisation form state ────────────────────────────────────────────────

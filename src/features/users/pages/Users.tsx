@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 import { usersApi } from '@/features/users/api/users';
 import { Modal, ConfirmDialog } from '@/shared/components/ui/Modal';
 import { Input, Select } from '@/shared/components/ui/Input';
-import type { User, UserRole, Permission, LoginHistory } from '@/types';
+import type { User, UserRole, Permission, LoginHistory, QueryParams } from '@/types';
 import { ROLE_PERMISSIONS } from '@/types';
 import { cn } from '@/shared/utils/utils';
 import { useAuthStore } from '@/core/auth/authStore';
@@ -175,7 +175,7 @@ export const Users = () => {
     if (search)       params.search = search;
     if (roleFilter)   params.role = roleFilter;
     if (statusFilter) params.status = statusFilter;
-    usersApi.list(params)
+    usersApi.list(params as QueryParams)
       .then(r => setUsers(r.data ?? []))
       .catch(() => {})
       .finally(() => setUsersLoading(false));

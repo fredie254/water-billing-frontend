@@ -17,7 +17,7 @@ import { fireNotification } from '@/core/store/notificationStore';
 import { billsApi, connectionsApi, tariffsApi } from '@/features/billing/api/billing';
 import { billingPeriodsApi } from '@/features/billing/api/billingPeriods';
 import { readingsApi } from '@/features/meters/api/meters';
-import type { Bill, BillStatus, BillingPeriod, BillingPeriodStatus, Connection, Tariff, MeterReading } from '@/types';
+import type { Bill, BillStatus, BillingPeriod, BillingPeriodStatus, Connection, Tariff, MeterReading, QueryParams } from '@/types';
 
 // ─── Status config ───────────────────────────────────────────────────────────
 
@@ -89,7 +89,7 @@ export const Bills = () => {
   // Wizard state
   const [showGenerate, setShowGenerate] = useState(false);
   const [wizardStep, setWizardStep] = useState<1 | 2>(1);
-  const [wizardResolving, setWizardResolving] = useState(false);
+  const [_wizardResolving, setWizardResolving] = useState(false);
   const [wizardPreview, setWizardPreview] = useState<{
     connection: Connection | null;
     tariff: Tariff | null;
@@ -113,9 +113,9 @@ export const Bills = () => {
       if (search) params.search = search;
       if (statusFilter !== 'all') params.status = statusFilter;
 
-      const res = await billsApi.list(params);
+      const res = await billsApi.list(params as QueryParams);
       setBills(res.data ?? []);
-      setBillsTotal(res.total ?? res.data?.length ?? 0);
+      setBillsTotal(res.pagination?.total ?? res.data?.length ?? 0);
     } catch (err) {
       console.error('Failed to fetch bills', err);
     } finally {
@@ -150,7 +150,6 @@ export const Bills = () => {
     handleSubmit: hs1,
     formState: { errors: err1 },
     reset: reset1,
-    watch: watch1,
   } = useForm<Step1Values>({ resolver: zodResolver(step1Schema) });
 
   const onStep1Submit = async (values: Step1Values) => {
@@ -170,7 +169,6 @@ export const Bills = () => {
         pageSize: 1,
         sortBy: 'readingDate',
         sortOrder: 'desc',
-        flagged: false,
       });
       const latestReading: MeterReading | undefined = readingsRes.data?.[0];
       const previousReading = latestReading?.readingValue ?? 0;
