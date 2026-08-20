@@ -200,9 +200,12 @@ export const Bills = () => {
     const { connection, values, result, billNumber } = wizardPreview;
 
     try {
-      await billsApi.generate(connection!.id, {
-        month: new Date(values.billingPeriodStart).getMonth() + 1,
-        year: new Date(values.billingPeriodStart).getFullYear(),
+      await billsApi.generate({
+        connectionId: connection!.id,
+        billingPeriodStart: values.billingPeriodStart,
+        billingPeriodEnd: values.billingPeriodEnd,
+        currentReading: values.currentReading,
+        dueDate: values.dueDate,
       });
 
       // Auto-trigger notification: new bill issued
@@ -243,10 +246,7 @@ export const Bills = () => {
 
   const onCycleSubmit = async (values: CycleValues) => {
     try {
-      await billingPeriodsApi.create({
-        ...values,
-        status: 'scheduled',
-      });
+      await billingPeriodsApi.create(values);
       await fetchPeriods();
     } catch (err) {
       console.error('Failed to create billing period', err);
@@ -373,7 +373,11 @@ export const Bills = () => {
           className="btn-sm btn-primary flex items-center gap-1.5"
           onClick={async () => {
             try {
-              await billingPeriodsApi.generateBills(r.id);
+              await billingPeriodsApi.generateBills(r.id, {
+                billingPeriodStart: r.readingPeriodStart,
+                billingPeriodEnd: r.readingPeriodEnd,
+                dueDate: r.dueDate,
+              });
               await fetchPeriods();
             } catch (err) {
               console.error('Failed to generate bills for period', err);

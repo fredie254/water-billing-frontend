@@ -1,4 +1,4 @@
-﻿import { apiClient } from '@/core/api/client';
+import { apiClient } from '@/core/api/client';
 import type { NotificationLog, NotificationTemplate, PaginatedResponse, QueryParams } from '@/types';
 
 export const notificationsApi = {
@@ -11,10 +11,10 @@ export const notificationsApi = {
   getTemplates: (params?: QueryParams) =>
     apiClient.get<PaginatedResponse<NotificationTemplate>>('/notifications/templates', { params }).then((r) => r.data),
 
-  createTemplate: (data: Partial<NotificationTemplate>) =>
+  createTemplate: (data: { name: string; type: string; event: string; subject?: string; body: string; isActive: boolean }) =>
     apiClient.post<{ data: NotificationTemplate }>('/notifications/templates', data).then((r) => r.data.data),
 
-  updateTemplate: (id: string, data: Partial<NotificationTemplate>) =>
+  updateTemplate: (id: string, data: { name?: string; type?: string; event?: string; subject?: string; body?: string; isActive?: boolean }) =>
     apiClient.put<{ data: NotificationTemplate }>(`/notifications/templates/${id}`, data).then((r) => r.data.data),
 
   getChannels: () =>

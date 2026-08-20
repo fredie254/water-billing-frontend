@@ -1,4 +1,4 @@
-﻿import { apiClient } from '@/core/api/client';
+import { apiClient } from '@/core/api/client';
 import type { BillingPeriod, PaginatedResponse, QueryParams } from '@/types';
 
 export const billingPeriodsApi = {
@@ -8,12 +8,25 @@ export const billingPeriodsApi = {
   getOne: (id: string) =>
     apiClient.get<{ data: BillingPeriod }>(`/billing-periods/${id}`).then((r) => r.data.data),
 
-  create: (data: Partial<BillingPeriod>) =>
+  create: (data: {
+    name: string;
+    cycleType: string;
+    readingPeriodStart: string;
+    readingPeriodEnd: string;
+    billingDate: string;
+    dueDate: string;
+    notes?: string;
+  }) =>
     apiClient.post<{ data: BillingPeriod }>('/billing-periods', data).then((r) => r.data.data),
 
   update: (id: string, data: Partial<BillingPeriod>) =>
     apiClient.put<{ data: BillingPeriod }>(`/billing-periods/${id}`, data).then((r) => r.data.data),
 
-  generateBills: (id: string) =>
-    apiClient.post(`/billing-periods/${id}/generate-bills`).then((r) => r.data),
+  generateBills: (id: string, data: {
+    billingPeriodStart: string;
+    billingPeriodEnd: string;
+    dueDate: string;
+    zoneId?: string;
+  }) =>
+    apiClient.post(`/billing-periods/${id}/generate-bills`, data).then((r) => r.data),
 };

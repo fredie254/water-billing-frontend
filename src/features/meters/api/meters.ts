@@ -1,4 +1,4 @@
-﻿import { apiClient } from '@/core/api/client';
+import { apiClient } from '@/core/api/client';
 import type { Meter, MeterReading, PaginatedResponse, QueryParams } from '@/types';
 
 export const metersApi = {
@@ -14,7 +14,14 @@ export const metersApi = {
   update: (id: string, data: Partial<Meter>) =>
     apiClient.put<{ data: Meter }>(`/meters/${id}`, data).then((r) => r.data.data),
 
-  retire: (id: string) => apiClient.post(`/meters/${id}/retire`),
+  retire: (id: string, data?: { reason?: string; replacedById?: string }) =>
+    apiClient.post(`/meters/${id}/retire`, data ?? {}),
+
+  logEvent: (id: string, data: { eventType: string; description: string; performedBy?: string; notes?: string }) =>
+    apiClient.post(`/meters/${id}/event`, data).then((r) => r.data),
+
+  assign: (id: string, data: { propertyId?: string; customerId?: string; installationLocation?: string }) =>
+    apiClient.post(`/meters/${id}/assign`, data).then((r) => r.data),
 };
 
 export const readingsApi = {
@@ -24,7 +31,7 @@ export const readingsApi = {
   getOne: (id: string) =>
     apiClient.get<{ data: MeterReading }>(`/meter-readings/${id}`).then((r) => r.data.data),
 
-  create: (data: Partial<MeterReading>) =>
+  create: (data: Partial<MeterReading> & { meterId?: string; connectionId?: string }) =>
     apiClient.post<{ data: MeterReading }>('/meter-readings', data).then((r) => r.data.data),
 
   approve: (id: string) => apiClient.post(`/meter-readings/${id}/approve`),
@@ -32,6 +39,6 @@ export const readingsApi = {
   reject: (id: string, reason: string) =>
     apiClient.post(`/meter-readings/${id}/reject`, { reason }),
 
-  bulkCreate: (readings: Partial<MeterReading>[]) =>
-    apiClient.post('/meter-readings/bulk', { readings }).then((r) => r.data),
+  bulkCreate: (data: { routeId: string; readingDate: string; readings: Array<{ meterId: string; connectionId: string; currentReading: number; notes?: string }> }) =>
+    apiClient.post('/meter-readings/bulk', data).then((r) => r.data),
 };

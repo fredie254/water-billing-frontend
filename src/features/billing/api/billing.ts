@@ -1,4 +1,4 @@
-﻿import { apiClient } from '@/core/api/client';
+import { apiClient } from '@/core/api/client';
 import type { Bill, Connection, Tariff, PaginatedResponse, QueryParams } from '@/types';
 
 export const billsApi = {
@@ -8,11 +8,25 @@ export const billsApi = {
   getOne: (id: string) =>
     apiClient.get<{ data: Bill }>(`/invoices/${id}`).then((r) => r.data.data),
 
-  generate: (connectionId: string, period: { month: number; year: number }) =>
-    apiClient.post<{ data: Bill }>('/invoices/generate', { connectionId, ...period }).then((r) => r.data.data),
+  generate: (data: {
+    connectionId: string;
+    billingPeriodStart: string;
+    billingPeriodEnd: string;
+    currentReading?: number;
+    dueDate: string;
+    discountPercent?: number;
+    penaltyAmount?: number;
+    notes?: string;
+  }) =>
+    apiClient.post<{ data: Bill }>('/invoices/generate', data).then((r) => r.data.data),
 
-  bulkGenerate: (period: { month: number; year: number }) =>
-    apiClient.post('/invoices/bulk-generate', period).then((r) => r.data),
+  bulkGenerate: (data: {
+    billingPeriodStart: string;
+    billingPeriodEnd: string;
+    dueDate: string;
+    zoneId?: string;
+  }) =>
+    apiClient.post('/invoices/bulk-generate', data).then((r) => r.data),
 
   voidBill: (id: string, reason: string) =>
     apiClient.post(`/invoices/${id}/void`, { reason }),
@@ -33,10 +47,10 @@ export const connectionsApi = {
   create: (data: Partial<Connection>) =>
     apiClient.post<{ data: Connection }>('/connections', data).then((r) => r.data.data),
 
-  update: (id: string, data: Partial<Connection>) =>
+  update: (id: string, data: { tariffId?: string; routeId?: string; zoneId?: string; deposit?: number; status?: string }) =>
     apiClient.put<{ data: Connection }>(`/connections/${id}`, data).then((r) => r.data.data),
 
-  suspend: (id: string, reason?: string) =>
+  suspend: (id: string, reason: string) =>
     apiClient.post(`/connections/${id}/suspend`, { reason }),
 
   activate: (id: string) => apiClient.post(`/connections/${id}/activate`),
@@ -51,7 +65,7 @@ export const tariffsApi = {
   getOne: (id: string) =>
     apiClient.get<{ data: Tariff }>(`/tariffs/${id}`).then((r) => r.data.data),
 
-  create: (data: Partial<Tariff>) =>
+  create: (data: Partial<Tariff> & { blocks: Array<{ fromUnits: number; toUnits: number | null; ratePerUnit: number }> }) =>
     apiClient.post<{ data: Tariff }>('/tariffs', data).then((r) => r.data.data),
 
   update: (id: string, data: Partial<Tariff>) =>

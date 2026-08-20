@@ -5,7 +5,8 @@ import { Droplets, Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/core/auth/authStore';
-import type { User } from '@/types';
+import { authApi } from '@/features/auth/api/auth';
+import { extractError } from '@/core/api/client';
 
 const schema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -13,32 +14,14 @@ const schema = z.object({
 });
 type LoginForm = z.infer<typeof schema>;
 
-const MOCK_USERS: Record<string, Omit<User, 'email'>> = {
-  'admin@rumawasco.go.ke':          { id: 'u1', tenantId: 't1', name: 'Admin User',       role: 'tenant_admin',    status: 'active', createdAt: '2024-01-01' },
-  'manager@rumawasco.go.ke':        { id: 'u2', tenantId: 't1', name: 'Grace Manager',     role: 'manager',         status: 'active', createdAt: '2024-01-01' },
-  'billing@rumawasco.go.ke':        { id: 'u3', tenantId: 't1', name: 'Finance Officer',   role: 'billing_officer', status: 'active', createdAt: '2024-01-01' },
-  'reader@rumawasco.go.ke':         { id: 'u4', tenantId: 't1', name: 'John Reader',       role: 'meter_reader',    status: 'active', createdAt: '2024-01-01' },
-  'customer.service@rumawasco.go.ke': { id: 'u5', tenantId: 't1', name: 'Jane Support',   role: 'customer_service',status: 'active', createdAt: '2024-01-01' },
-  'customer@rumawasco.go.ke':       { id: 'u6', tenantId: 't1', name: 'Alice Kamau',       role: 'customer',        customerId: 'c1', status: 'active', createdAt: '2024-01-01' },
-  // legacy alias kept for convenience
-  'demo@rumawasco.go.ke':           { id: 'u1', tenantId: 't1', name: 'Admin User',        role: 'tenant_admin',    status: 'active', createdAt: '2024-01-01' },
-};
-
-const DEMO_PASSWORD = 'password';
-
-// Mock login — replace with authApi.login() when backend is ready
-const mockLogin = async (email: string, password: string): Promise<{ token: string; refreshToken: string; user: User }> => {
-  await new Promise((r) => setTimeout(r, 700));
-  const profile = MOCK_USERS[email.toLowerCase()];
-  if (!profile || password !== DEMO_PASSWORD) {
-    throw new Error('Invalid email or password');
-  }
-  return {
-    token: `mock-jwt-${profile.role}`,
-    refreshToken: `mock-refresh-${profile.role}`,
-    user: { ...profile, email: email.toLowerCase() },
-  };
-};
+const DEMO_ACCOUNTS = [
+  { role: 'Admin',            email: 'admin@rumawasco.go.ke' },
+  { role: 'Manager',          email: 'manager@rumawasco.go.ke' },
+  { role: 'Billing Officer',  email: 'billing@rumawasco.go.ke' },
+  { role: 'Meter Reader',     email: 'reader@rumawasco.go.ke' },
+  { role: 'Customer Service', email: 'customer.service@rumawasco.go.ke' },
+  { role: 'Customer',         email: 'customer@rumawasco.go.ke' },
+];
 
 export const Login = () => {
   const { setAuth } = useAuthStore();
@@ -54,11 +37,11 @@ export const Login = () => {
   const onSubmit = async (data: LoginForm) => {
     try {
       setError('');
-      const res = await mockLogin(data.email, data.password);
-      setAuth(res.user, res.token, res.refreshToken);
+      const res = await authApi.login(data.email, data.password);
+      setAuth(res.user, res.accessToken, res.refreshToken);
       navigate(res.user.role === 'customer' ? '/portal' : '/');
     } catch (err) {
-      setError((err as Error).message);
+      setError(extractError(err));
     }
   };
 
@@ -162,20 +145,13 @@ export const Login = () => {
             <div className="mt-6 p-4 bg-gray-50 rounded-xl space-y-2">
               <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Demo accounts — password: <span className="font-mono text-primary-700">password</span></p>
               <div className="grid grid-cols-1 gap-1">
-                {[
-                  { role: 'Admin',           email: 'admin@rumawasco.go.ke' },
-                  { role: 'Manager',         email: 'manager@rumawasco.go.ke' },
-                  { role: 'Billing Officer', email: 'billing@rumawasco.go.ke' },
-                  { role: 'Meter Reader',    email: 'reader@rumawasco.go.ke' },
-                  { role: 'Customer Service',email: 'customer.service@rumawasco.go.ke' },
-                  { role: 'Customer',        email: 'customer@rumawasco.go.ke' },
-                ].map(({ role, email }) => (
+                {DEMO_ACCOUNTS.map(({ role, email }) => (
                   <button
                     key={email}
                     type="button"
                     onClick={() => {
                       setValue('email', email, { shouldValidate: false });
-                      setValue('password', DEMO_PASSWORD, { shouldValidate: false });
+                      setValue('password', 'password', { shouldValidate: false });
                       setError('');
                     }}
                     className="flex items-center justify-between px-2 py-1 rounded hover:bg-gray-200 transition-colors text-left w-full"
