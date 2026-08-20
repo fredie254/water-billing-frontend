@@ -11,8 +11,9 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:3000',
+        target: 'https://api-rumawasco.nexusiot.xyz',
         changeOrigin: true,
+        secure: true,
       },
     },
   },

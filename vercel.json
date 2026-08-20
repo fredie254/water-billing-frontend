@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/v1/:path*",
+      "destination": "https://api-rumawasco.nexusiot.xyz/api/v1/:path*"
+    }
+  ]
+}

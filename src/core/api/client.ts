@@ -2,7 +2,7 @@ import axios from 'axios';
 import type { AxiosError } from 'axios';
 import { useAuthStore } from '@/core/auth/authStore';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://api-rumawasco.nexusiot.xyz/api/v1';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 // ── Case converters ───────────────────────────────────────────────────────────
 
