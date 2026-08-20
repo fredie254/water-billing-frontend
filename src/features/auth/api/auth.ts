@@ -1,15 +1,12 @@
 import { apiClient } from '@/core/api/client';
 import type { AuthResponse, User } from '@/types';
-import { useAuthStore } from '@/core/auth/authStore';
 
 export const authApi = {
   login: (email: string, password: string) =>
     apiClient.post<AuthResponse>('/auth/login', { email, password }).then((r) => r.data),
 
-  logout: () => {
-    const refreshToken = useAuthStore.getState().refreshToken;
-    return apiClient.post('/auth/logout', { refreshToken });
-  },
+  logout: (refreshToken: string) =>
+    apiClient.post('/auth/logout', { refreshToken }),
 
   refreshToken: (refreshToken: string) =>
     apiClient.post<{ accessToken: string }>('/auth/refresh', { refreshToken }).then((r) => r.data),
