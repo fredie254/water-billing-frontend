@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   UserPlus, Search, Edit2, History, UserCheck, UserX, CheckCircle2, XCircle, Shield, Lock,
-  Download, LayoutList, Layers, Trash2,
+  Download, LayoutList, Layers, Trash2, KeyRound, Copy,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { usersApi } from '@/features/users/api/users';
@@ -142,15 +142,17 @@ type EditForm = z.infer<typeof editSchema>;
 
 // Shared row component used in both list and grouped views
 const UserRow = ({
-  u, canManage, currentUserId, onEdit, onHistory, onToggle, onDelete, hideRole,
+  u, canManage, currentUserId, currentUserRole, onEdit, onHistory, onToggle, onDelete, onResetPassword, hideRole,
 }: {
   u: User;
   canManage: boolean;
   currentUserId?: string;
+  currentUserRole?: string;
   onEdit: (u: User) => void;
   onHistory: (u: User) => void;
   onToggle: (u: User) => void;
   onDelete: (u: User) => void;
+  onResetPassword: (u: User) => void;
   hideRole?: boolean;
 }) => (
   <tr>
@@ -204,12 +206,22 @@ const UserRow = ({
               {u.status === 'active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
             </button>
             <button
-              onClick={() => onDelete(u)}
-              title="Delete user permanently"
-              className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-700"
+              onClick={() => onResetPassword(u)}
+              title="Reset password"
+              className="p-1.5 rounded-lg text-gray-400 hover:bg-amber-50 hover:text-amber-600"
             >
-              <Trash2 className="w-4 h-4" />
+              <KeyRound className="w-4 h-4" />
             </button>
+            {/* Delete: soft-delete, system_admin only */}
+            {currentUserRole === 'super_admin' && (
+              <button
+                onClick={() => onDelete(u)}
+                title="Delete user permanently"
+                className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-700"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
           </>)}
         </div>
       </td>
@@ -248,8 +260,11 @@ export const Users = () => {
   const [historyUser, setHistoryUser] = useState<User | null>(null);
   const [loginHistory, setLoginHistory] = useState<LoginHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [toggleUser, setToggleUser] = useState<User | null>(null);
-  const [deleteUser, setDeleteUser] = useState<User | null>(null);
+  const [toggleUser, setToggleUser]       = useState<User | null>(null);
+  const [deactivateReason, setDeactivateReason] = useState('');
+  const [deleteUser, setDeleteUser]       = useState<User | null>(null);
+  const [resetUser, setResetUser]         = useState<User | null>(null);
+  const [tempPassword, setTempPassword]   = useState('');
   const [saving, setSaving] = useState(false);
 
   const inviteForm = useForm<InviteForm>({ resolver: zodResolver(inviteSchema) });
@@ -365,6 +380,10 @@ export const Users = () => {
     if (!editUser) return;
     setSaving(true);
     try {
+      // Use dedicated role endpoint if role changed (it carries audit trail)
+      if (data.role !== editUser.role) {
+        await usersApi.updateRole(editUser.id, data.role, 'Role updated via admin panel');
+      }
       const updated = await usersApi.update(editUser.id, {
         name: data.name,
         phone: data.phone,
@@ -385,7 +404,7 @@ export const Users = () => {
     setSaving(true);
     try {
       if (toggleUser.status === 'active') {
-        await usersApi.deactivate(toggleUser.id);
+        await usersApi.deactivate(toggleUser.id, deactivateReason || undefined);
         setUsers(prev => prev.map(u => u.id === toggleUser.id ? { ...u, status: 'inactive' as const } : u));
       } else {
         await usersApi.activate(toggleUser.id);
@@ -396,6 +415,21 @@ export const Users = () => {
     } finally {
       setSaving(false);
       setToggleUser(null);
+      setDeactivateReason('');
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetUser) return;
+    setSaving(true);
+    try {
+      const res = await usersApi.resetPassword(resetUser.id) as unknown as Record<string, unknown>;
+      const pw = (res as any)?.temporaryPassword ?? (res as any)?.temporary_password ?? (res as any)?.data?.temporaryPassword ?? '';
+      setTempPassword(String(pw));
+    } catch {
+      // handle silently
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -640,7 +674,7 @@ export const Users = () => {
                 ) : filtered.length === 0 ? (
                   <tr><td colSpan={canManage ? 8 : 7} className="text-center py-12 text-gray-400 text-sm">No users match your filters</td></tr>
                 ) : filtered.map(u => (
-                  <UserRow key={u.id} u={u} canManage={canManage} currentUserId={currentUser?.id} onEdit={openEdit} onHistory={openHistory} onToggle={setToggleUser} onDelete={setDeleteUser} />
+                  <UserRow key={u.id} u={u} canManage={canManage} currentUserId={currentUser?.id} currentUserRole={currentUser?.role} onEdit={openEdit} onHistory={openHistory} onToggle={setToggleUser} onDelete={setDeleteUser} onResetPassword={setResetUser} />
                 ))}
               </tbody>
             </table>
@@ -686,7 +720,7 @@ export const Users = () => {
                   </thead>
                   <tbody>
                     {roleUsers.map(u => (
-                      <UserRow key={u.id} u={u} canManage={canManage} currentUserId={currentUser?.id} onEdit={openEdit} onHistory={openHistory} onToggle={setToggleUser} onDelete={setDeleteUser} hideRole />
+                      <UserRow key={u.id} u={u} canManage={canManage} currentUserId={currentUser?.id} currentUserRole={currentUser?.role} onEdit={openEdit} onHistory={openHistory} onToggle={setToggleUser} onDelete={setDeleteUser} onResetPassword={setResetUser} hideRole />
                     ))}
                   </tbody>
                 </table>
@@ -849,7 +883,7 @@ export const Users = () => {
       {/* Activate / Deactivate confirm */}
       <ConfirmDialog
         open={!!toggleUser}
-        onClose={() => setToggleUser(null)}
+        onClose={() => { setToggleUser(null); setDeactivateReason(''); }}
         onConfirm={handleToggle}
         loading={saving}
         title={toggleUser?.status === 'active' ? 'Deactivate User' : 'Activate User'}
@@ -860,7 +894,20 @@ export const Users = () => {
         }
         confirmLabel={toggleUser?.status === 'active' ? 'Deactivate' : 'Activate'}
         confirmVariant={toggleUser?.status === 'active' ? 'danger' : 'primary'}
-      />
+      >
+        {toggleUser?.status === 'active' && (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reason (optional)</label>
+            <textarea
+              rows={2}
+              placeholder="e.g. Employee left the organisation"
+              value={deactivateReason}
+              onChange={e => setDeactivateReason(e.target.value)}
+              className="input-base w-full resize-none text-sm"
+            />
+          </div>
+        )}
+      </ConfirmDialog>
 
       {/* Delete user confirm */}
       <ConfirmDialog
@@ -873,6 +920,47 @@ export const Users = () => {
         confirmLabel="Delete Permanently"
         confirmVariant="danger"
       />
+
+      {/* Reset password confirm + result modal */}
+      <ConfirmDialog
+        open={!!resetUser && !tempPassword}
+        onClose={() => setResetUser(null)}
+        onConfirm={handleResetPassword}
+        loading={saving}
+        title="Reset Password"
+        message={`Generate a new temporary password for ${resetUser?.name}? They will need to change it on next login.`}
+        confirmLabel="Reset Password"
+        confirmVariant="primary"
+      />
+
+      {/* Temp password display */}
+      <Modal
+        open={!!tempPassword}
+        onClose={() => { setResetUser(null); setTempPassword(''); }}
+        title="Temporary Password Generated"
+        size="sm"
+      >
+        <p className="text-sm text-gray-600 mb-4">
+          Share this temporary password securely with <strong>{resetUser?.name}</strong>. It will expire on first use or within 24 hours.
+        </p>
+        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <code className="flex-1 font-mono text-lg font-bold text-amber-800 tracking-widest select-all">
+            {tempPassword}
+          </code>
+          <button
+            onClick={() => navigator.clipboard.writeText(tempPassword)}
+            title="Copy to clipboard"
+            className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-100 flex-shrink-0"
+          >
+            <Copy className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex justify-end mt-6">
+          <button className="btn-primary" onClick={() => { setResetUser(null); setTempPassword(''); }}>
+            Done
+          </button>
+        </div>
+      </Modal>
       </>)}
     </div>
   );

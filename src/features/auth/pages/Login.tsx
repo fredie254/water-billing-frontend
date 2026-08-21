@@ -41,24 +41,14 @@ const schema = z.object({
 });
 type LoginForm = z.infer<typeof schema>;
 
-const DEMO_ACCOUNTS = [
-  { role: 'Admin',            email: 'admin@rumawasco.go.ke' },
-  { role: 'Manager',          email: 'manager@rumawasco.go.ke' },
-  { role: 'Billing Officer',  email: 'billing@rumawasco.go.ke' },
-  { role: 'Meter Reader',     email: 'reader@rumawasco.go.ke' },
-  { role: 'Customer Service', email: 'customer.service@rumawasco.go.ke' },
-  { role: 'Customer',         email: 'customer@rumawasco.go.ke' },
-];
-
 export const Login = () => {
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
-  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<LoginForm>({
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
     resolver: zodResolver(schema),
-    defaultValues: { email: 'admin@rumawasco.go.ke', password: 'password' },
   });
 
   const onSubmit = async (data: LoginForm) => {
@@ -175,27 +165,6 @@ export const Login = () => {
               </button>
             </form>
 
-            <div className="mt-6 p-4 bg-gray-50 rounded-xl space-y-2">
-              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Demo accounts — password: <span className="font-mono text-primary-700">password</span></p>
-              <div className="grid grid-cols-1 gap-1">
-                {DEMO_ACCOUNTS.map(({ role, email }) => (
-                  <button
-                    key={email}
-                    type="button"
-                    onClick={() => {
-                      setValue('email', email, { shouldValidate: false });
-                      setValue('password', 'password', { shouldValidate: false });
-                      setError('');
-                    }}
-                    className="flex items-center justify-between px-2 py-1 rounded hover:bg-gray-200 transition-colors text-left w-full"
-                  >
-                    <span className="text-xs text-gray-500 w-32">{role}</span>
-                    <span className="font-mono text-xs text-primary-700 truncate">{email}</span>
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-gray-400 mt-1">Click a row to auto-fill credentials</p>
-            </div>
           </div>
         </div>
 

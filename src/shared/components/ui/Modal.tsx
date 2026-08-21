@@ -1,4 +1,4 @@
-﻿import { useEffect } from 'react';
+﻿import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/shared/utils/utils';
 
@@ -49,7 +49,7 @@ export const Modal = ({ open, onClose, title, description, children, size = 'md'
 };
 
 export const ConfirmDialog = ({
-  open, onClose, onConfirm, title, message, confirmLabel = 'Confirm', confirmVariant = 'danger', loading,
+  open, onClose, onConfirm, title, message, confirmLabel = 'Confirm', confirmVariant = 'danger', loading, children,
 }: {
   open: boolean;
   onClose: () => void;
@@ -59,9 +59,11 @@ export const ConfirmDialog = ({
   confirmLabel?: string;
   confirmVariant?: 'primary' | 'danger';
   loading?: boolean;
+  children?: React.ReactNode;
 }) => (
   <Modal open={open} onClose={onClose} title={title} size="sm">
     <p className="text-sm text-gray-600">{message}</p>
+    {children}
     <div className="flex justify-end gap-3 mt-6">
       <button className="btn-secondary" onClick={onClose} disabled={loading}>Cancel</button>
       <button

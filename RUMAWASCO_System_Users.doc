@@ -1,0 +1,568 @@
+<html xmlns:o='urn:schemas-microsoft-com:office:office'
+      xmlns:w='urn:schemas-microsoft-com:office:word'
+      xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset="UTF-8">
+<meta name=ProgId content=Word.Document>
+<meta name=Generator content='Microsoft Word 15'>
+<title>RUMAWASCO System Users</title>
+<style>
+  /* Page setup */
+  @page {
+    size: A4;
+    margin: 2cm 2.5cm 2cm 2.5cm;
+    mso-header-margin: 1.0cm;
+    mso-footer-margin: 1.0cm;
+  }
+  body {
+    font-family: Calibri, Arial, sans-serif;
+    font-size: 11pt;
+    color: #1a1a1a;
+    line-height: 1.5;
+  }
+  h1 {
+    font-size: 22pt;
+    font-weight: bold;
+    color: #1d4ed8;
+    margin-bottom: 2pt;
+    border-bottom: 3pt solid #1d4ed8;
+    padding-bottom: 4pt;
+  }
+  h2 {
+    font-size: 14pt;
+    font-weight: bold;
+    color: #1e40af;
+    margin-top: 18pt;
+    margin-bottom: 6pt;
+  }
+  h3 {
+    font-size: 11pt;
+    font-weight: bold;
+    color: #374151;
+    margin-top: 12pt;
+    margin-bottom: 4pt;
+  }
+  p {
+    margin: 4pt 0;
+  }
+  .subtitle {
+    font-size: 12pt;
+    color: #6b7280;
+    margin-bottom: 0;
+  }
+  .meta {
+    font-size: 9pt;
+    color: #9ca3af;
+    margin-bottom: 14pt;
+  }
+  /* Warning box */
+  .warning {
+    background: #fef3c7;
+    border-left: 4pt solid #f59e0b;
+    padding: 8pt 12pt;
+    margin: 12pt 0;
+    font-size: 10pt;
+    color: #92400e;
+  }
+  .warning strong { color: #78350f; }
+  /* Info box */
+  .info {
+    background: #eff6ff;
+    border-left: 4pt solid #3b82f6;
+    padding: 8pt 12pt;
+    margin: 12pt 0;
+    font-size: 10pt;
+    color: #1e40af;
+  }
+  /* Main user table */
+  table.users {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10pt;
+    margin-top: 8pt;
+  }
+  table.users thead tr {
+    background: #1d4ed8;
+    color: white;
+  }
+  table.users thead th {
+    padding: 7pt 9pt;
+    text-align: left;
+    font-weight: bold;
+    font-size: 10pt;
+    border: 1pt solid #1e40af;
+  }
+  table.users tbody tr:nth-child(even) {
+    background: #f0f4ff;
+  }
+  table.users tbody tr:hover {
+    background: #dbeafe;
+  }
+  table.users td {
+    padding: 6pt 9pt;
+    border: 0.75pt solid #d1d5db;
+    vertical-align: top;
+  }
+  .role-badge {
+    display: inline-block;
+    padding: 1pt 6pt;
+    border-radius: 3pt;
+    font-size: 9pt;
+    font-weight: bold;
+  }
+  .badge-purple { background: #f3e8ff; color: #7e22ce; }
+  .badge-blue   { background: #dbeafe; color: #1e40af; }
+  .badge-green  { background: #dcfce7; color: #166534; }
+  .badge-yellow { background: #fef9c3; color: #854d0e; }
+  .badge-gray   { background: #f3f4f6; color: #374151; }
+  .level-tag {
+    display: inline-block;
+    background: #e0f2fe;
+    color: #0369a1;
+    padding: 1pt 5pt;
+    border-radius: 3pt;
+    font-size: 8.5pt;
+    font-weight: bold;
+    font-family: Consolas, monospace;
+  }
+  .pwd {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 10pt;
+    font-weight: bold;
+    color: #dc2626;
+    background: #fff7f7;
+    padding: 1pt 5pt;
+    border: 0.5pt solid #fecaca;
+    border-radius: 2pt;
+  }
+  .email {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 9.5pt;
+    color: #374151;
+  }
+  /* Permission table */
+  table.perms {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    margin-top: 8pt;
+  }
+  table.perms thead tr {
+    background: #374151;
+    color: white;
+  }
+  table.perms thead th {
+    padding: 5pt 7pt;
+    text-align: left;
+    font-weight: bold;
+    border: 0.75pt solid #4b5563;
+  }
+  table.perms td {
+    padding: 5pt 7pt;
+    border: 0.75pt solid #e5e7eb;
+    vertical-align: top;
+  }
+  table.perms tbody tr:nth-child(even) { background: #f9fafb; }
+  .check { color: #16a34a; font-weight: bold; }
+  .cross  { color: #d1d5db; }
+  .footer {
+    margin-top: 24pt;
+    padding-top: 8pt;
+    border-top: 1pt solid #e5e7eb;
+    font-size: 8.5pt;
+    color: #9ca3af;
+    text-align: center;
+  }
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     COVER / HEADER
+═══════════════════════════════════════════ -->
+<h1>&#128167; RUMAWASCO &mdash; System Users &amp; Access Control</h1>
+<p class="subtitle">Water Billing &amp; Management System &mdash; Preconfigured User Accounts</p>
+<p class="meta">Document prepared: August 2026 &nbsp;|&nbsp; Confidential &mdash; Internal Use Only</p>
+
+<div class="warning">
+  <strong>&#9888; Security Notice:</strong> This document contains sensitive credentials. Distribute only to authorised personnel. All users <strong>must change their passwords</strong> on first login. Do not share this document via unsecured channels.
+</div>
+
+<div class="info">
+  <strong>&#128274; Default Password Policy:</strong> All accounts below use the temporary default password shown. Passwords must be at least 8 characters and changed immediately upon first access. The system enforces password change on accounts flagged <em>must_change_password = true</em>.
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 1 — USER ACCOUNTS
+═══════════════════════════════════════════ -->
+<h2>1. Preconfigured System Accounts</h2>
+
+<table class="users">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Full Name</th>
+      <th>Email Address</th>
+      <th>Role</th>
+      <th>Access Level</th>
+      <th>Temporary Password</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td><strong>Admin User</strong></td>
+      <td class="email">admin@rumawasco.go.ke</td>
+      <td><span class="role-badge badge-purple">Super Admin</span></td>
+      <td><span class="level-tag">L1</span></td>
+      <td><span class="pwd">password</span></td>
+      <td>Active</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td><strong>Operations Manager</strong></td>
+      <td class="email">manager@rumawasco.go.ke</td>
+      <td><span class="role-badge badge-blue">Operations Manager</span></td>
+      <td><span class="level-tag">L2</span></td>
+      <td><span class="pwd">password</span></td>
+      <td>Active</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td><strong>Billing Officer</strong></td>
+      <td class="email">billing@rumawasco.go.ke</td>
+      <td><span class="role-badge badge-green">Billing Officer</span></td>
+      <td><span class="level-tag">L4</span></td>
+      <td><span class="pwd">password</span></td>
+      <td>Active</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td><strong>Meter Reader</strong></td>
+      <td class="email">reader@rumawasco.go.ke</td>
+      <td><span class="role-badge badge-yellow">Field Officer</span></td>
+      <td><span class="level-tag">L7</span></td>
+      <td><span class="pwd">password</span></td>
+      <td>Active</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td><strong>Customer Service Officer</strong></td>
+      <td class="email">customer.service@rumawasco.go.ke</td>
+      <td><span class="role-badge badge-gray">Customer Service</span></td>
+      <td><span class="level-tag">L5</span></td>
+      <td><span class="pwd">password</span></td>
+      <td>Active</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td><strong>Customer (Portal)</strong></td>
+      <td class="email">customer@rumawasco.go.ke</td>
+      <td><span class="role-badge badge-gray">Customer</span></td>
+      <td><span class="level-tag">L10</span></td>
+      <td><span class="pwd">password</span></td>
+      <td>Active</td>
+    </tr>
+  </tbody>
+</table>
+
+<p style="font-size:9pt; color:#6b7280; margin-top:6pt;">
+  * Additional accounts for Utility Manager, Finance Manager, Metering Supervisor, Accountant, and Auditor
+  can be created by the Super Admin via <strong>Settings &rarr; Users &amp; Access Control &rarr; Invite User</strong>.
+</p>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 2 — ROLE DESCRIPTIONS
+═══════════════════════════════════════════ -->
+<h2>2. Role Descriptions &amp; Responsibilities</h2>
+
+<table class="users">
+  <thead>
+    <tr>
+      <th>Level</th>
+      <th>Role</th>
+      <th>Description</th>
+      <th>Who Assigns</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="level-tag">L1</span></td>
+      <td><span class="role-badge badge-purple">Super Admin</span></td>
+      <td>Full system access. System configuration, security and all operations. Can manage all users and roles.</td>
+      <td>System only</td>
+    </tr>
+    <tr>
+      <td><span class="level-tag">L2</span></td>
+      <td><span class="role-badge badge-blue">Utility Manager</span></td>
+      <td>Overall utility operations and strategic approvals. Full operational oversight except system configuration.</td>
+      <td>Super Admin</td>
+    </tr>
+    <tr>
+      <td><span class="level-tag">L2</span></td>
+      <td><span class="role-badge badge-blue">Operations Manager</span></td>
+      <td>Day-to-day operations management across all modules. Can invite and manage lower-level users.</td>
+      <td>Super Admin / Utility Manager</td>
+    </tr>
+    <tr>
+      <td><span class="level-tag">L3</span></td>
+      <td><span class="role-badge badge-green">Finance Manager</span></td>
+      <td>Billing, payments, financial reports and credit control. Approves adjustments and reversals.</td>
+      <td>Super Admin / Manager</td>
+    </tr>
+    <tr>
+      <td><span class="level-tag">L4</span></td>
+      <td><span class="role-badge badge-green">Billing Officer</span></td>
+      <td>Bill generation, payment recording and invoice management. Cannot approve adjustments.</td>
+      <td>Manager / Finance Manager</td>
+    </tr>
+    <tr>
+      <td><span class="level-tag">L5</span></td>
+      <td><span class="role-badge badge-gray">Customer Service</span></td>
+      <td>Customer enquiries, complaints, and service requests. Read-only on financial records.</td>
+      <td>Manager</td>
+    </tr>
+    <tr>
+      <td><span class="level-tag">L6</span></td>
+      <td><span class="role-badge badge-yellow">Metering Supervisor</span></td>
+      <td>Meter management, reading approval and inventory oversight. Reviews and approves readings.</td>
+      <td>Manager</td>
+    </tr>
+    <tr>
+      <td><span class="level-tag">L7</span></td>
+      <td><span class="role-badge badge-yellow">Field Officer</span></td>
+      <td>Meter readings capture, field activities and fault reporting. Mobile app access only.</td>
+      <td>Metering Supervisor / Manager</td>
+    </tr>
+    <tr>
+      <td><span class="level-tag">L8</span></td>
+      <td><span class="role-badge badge-gray">Accountant / Cashier</span></td>
+      <td>Payments, receipts, and financial reconciliation. Cannot generate bills or make adjustments.</td>
+      <td>Finance Manager</td>
+    </tr>
+    <tr>
+      <td><span class="level-tag">L9</span></td>
+      <td><span class="role-badge badge-gray">Auditor</span></td>
+      <td>Read-only audit and financial review across all modules. Cannot create or modify any records.</td>
+      <td>Super Admin / Manager</td>
+    </tr>
+    <tr>
+      <td><span class="level-tag">L10</span></td>
+      <td><span class="role-badge badge-gray">Customer</span></td>
+      <td>Own account access only via customer portal. Can view bills, statements and make payments.</td>
+      <td>System (auto-created)</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 3 — MODULE ACCESS SUMMARY
+═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2>3. Module Access Summary</h2>
+<p style="font-size:9.5pt; color:#6b7280;">&#10003; = Full Access &nbsp;&nbsp; &#9744; = Read Only &nbsp;&nbsp; &mdash; = No Access</p>
+
+<table class="perms">
+  <thead>
+    <tr>
+      <th>Module</th>
+      <th>Super Admin</th>
+      <th>Manager</th>
+      <th>Finance Mgr</th>
+      <th>Billing Officer</th>
+      <th>Customer Svc</th>
+      <th>Metering Sup</th>
+      <th>Field Officer</th>
+      <th>Auditor</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Customers</strong></td>
+      <td class="check">&#10003;</td>
+      <td class="check">&#10003;</td>
+      <td>&#9744;</td>
+      <td>&#9744;</td>
+      <td class="check">&#10003;</td>
+      <td>&#9744;</td>
+      <td class="cross">&mdash;</td>
+      <td>&#9744;</td>
+    </tr>
+    <tr>
+      <td><strong>Properties</strong></td>
+      <td class="check">&#10003;</td>
+      <td class="check">&#10003;</td>
+      <td>&#9744;</td>
+      <td>&#9744;</td>
+      <td class="check">&#10003;</td>
+      <td>&#9744;</td>
+      <td class="cross">&mdash;</td>
+      <td>&#9744;</td>
+    </tr>
+    <tr>
+      <td><strong>Connections</strong></td>
+      <td class="check">&#10003;</td>
+      <td class="check">&#10003;</td>
+      <td>&#9744;</td>
+      <td>&#9744;</td>
+      <td>&#9744;</td>
+      <td class="check">&#10003;</td>
+      <td class="cross">&mdash;</td>
+      <td>&#9744;</td>
+    </tr>
+    <tr>
+      <td><strong>Meters</strong></td>
+      <td class="check">&#10003;</td>
+      <td class="check">&#10003;</td>
+      <td class="cross">&mdash;</td>
+      <td class="cross">&mdash;</td>
+      <td class="cross">&mdash;</td>
+      <td class="check">&#10003;</td>
+      <td>&#9744;</td>
+      <td>&#9744;</td>
+    </tr>
+    <tr>
+      <td><strong>Readings</strong></td>
+      <td class="check">&#10003;</td>
+      <td class="check">&#10003;</td>
+      <td>&#9744;</td>
+      <td>&#9744;</td>
+      <td class="cross">&mdash;</td>
+      <td class="check">&#10003;</td>
+      <td class="check">&#10003; (create)</td>
+      <td>&#9744;</td>
+    </tr>
+    <tr>
+      <td><strong>Billing</strong></td>
+      <td class="check">&#10003;</td>
+      <td class="check">&#10003;</td>
+      <td class="check">&#10003;</td>
+      <td class="check">&#10003;</td>
+      <td>&#9744;</td>
+      <td class="cross">&mdash;</td>
+      <td class="cross">&mdash;</td>
+      <td>&#9744;</td>
+    </tr>
+    <tr>
+      <td><strong>Payments</strong></td>
+      <td class="check">&#10003;</td>
+      <td class="check">&#10003;</td>
+      <td class="check">&#10003;</td>
+      <td class="check">&#10003;</td>
+      <td class="cross">&mdash;</td>
+      <td class="cross">&mdash;</td>
+      <td class="cross">&mdash;</td>
+      <td>&#9744;</td>
+    </tr>
+    <tr>
+      <td><strong>Reports</strong></td>
+      <td class="check">&#10003;</td>
+      <td class="check">&#10003;</td>
+      <td class="check">&#10003;</td>
+      <td>&#9744;</td>
+      <td class="cross">&mdash;</td>
+      <td>&#9744;</td>
+      <td class="cross">&mdash;</td>
+      <td>&#9744;</td>
+    </tr>
+    <tr>
+      <td><strong>Users &amp; Roles</strong></td>
+      <td class="check">&#10003;</td>
+      <td class="check">&#10003;</td>
+      <td class="cross">&mdash;</td>
+      <td class="cross">&mdash;</td>
+      <td class="cross">&mdash;</td>
+      <td class="cross">&mdash;</td>
+      <td class="cross">&mdash;</td>
+      <td>&#9744;</td>
+    </tr>
+    <tr>
+      <td><strong>Settings</strong></td>
+      <td class="check">&#10003;</td>
+      <td>&#9744;</td>
+      <td class="cross">&mdash;</td>
+      <td class="cross">&mdash;</td>
+      <td class="cross">&mdash;</td>
+      <td class="cross">&mdash;</td>
+      <td class="cross">&mdash;</td>
+      <td>&#9744;</td>
+    </tr>
+    <tr>
+      <td><strong>Audit Log</strong></td>
+      <td class="check">&#10003;</td>
+      <td>&#9744;</td>
+      <td class="cross">&mdash;</td>
+      <td class="cross">&mdash;</td>
+      <td class="cross">&mdash;</td>
+      <td class="cross">&mdash;</td>
+      <td class="cross">&mdash;</td>
+      <td class="check">&#10003;</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 4 — FIRST LOGIN INSTRUCTIONS
+═══════════════════════════════════════════ -->
+<h2>4. First Login Instructions</h2>
+
+<h3>For the System Administrator</h3>
+<ol style="font-size:10.5pt; line-height:1.8;">
+  <li>Navigate to <strong>https://app.rumawasco.nexusiot.xyz</strong></li>
+  <li>Sign in with email <span class="email">admin@rumawasco.go.ke</span> and password <span class="pwd">password</span></li>
+  <li>You will be prompted to change your password immediately</li>
+  <li>Go to <strong>Settings &rarr; Users &amp; Access Control</strong></li>
+  <li>Click <strong>Invite User</strong> to create accounts for all other staff members</li>
+  <li>Assign each user their appropriate role from the table in Section 2</li>
+  <li>Instruct each user to change their password on first login</li>
+</ol>
+
+<h3>For All Other Users</h3>
+<ol style="font-size:10.5pt; line-height:1.8;">
+  <li>You will receive an email invitation with your login link</li>
+  <li>Use the temporary password provided by the administrator</li>
+  <li>Change your password immediately &mdash; choose a strong password of at least 8 characters</li>
+  <li>Contact the system administrator if you experience any login issues</li>
+</ol>
+
+<div class="warning" style="margin-top:16pt;">
+  <strong>&#128274; Password Requirements:</strong> Minimum 8 characters &bull; Mix of uppercase, lowercase, numbers, and symbols recommended &bull; Do not share passwords &bull; Passwords expire every 90 days.
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 5 — SUPPORT CONTACTS
+═══════════════════════════════════════════ -->
+<h2>5. Support &amp; Contact</h2>
+
+<table class="users" style="width:60%;">
+  <thead>
+    <tr>
+      <th>Support Type</th>
+      <th>Contact</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>System / Technical Support</td>
+      <td>System Administrator &mdash; <span class="email">admin@rumawasco.go.ke</span></td>
+    </tr>
+    <tr>
+      <td>Application URL</td>
+      <td><span class="email">https://app.rumawasco.nexusiot.xyz</span></td>
+    </tr>
+    <tr>
+      <td>API / Backend</td>
+      <td><span class="email">https://api-rumawasco.nexusiot.xyz</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="footer">
+  <p>RUMAWASCO Water Billing &amp; Management System &mdash; System Users Document &mdash; Confidential</p>
+  <p>Prepared August 2026 &nbsp;&bull;&nbsp; This document should be stored securely and access restricted to authorised personnel only.</p>
+</div>
+
+</body>
+</html>
