@@ -38,6 +38,49 @@ const SUB_COUNTIES = [
   'Kirinyaga South',
 ];
 
+// ─── Kirinyaga County geographic data ─────────────────────────────────────────
+// Source: Kenya National Bureau of Statistics / Kirinyaga County Integrated
+// Development Plan 2023–2027. Areas are constituency-level approximations.
+
+const SUB_COUNTY_AREA_KM2: Record<string, number> = {
+  'Kirinyaga Central': 311.4,  // Kirinyaga Central Constituency (Kerugoya/Kutus/Kagio)
+  'Kirinyaga East':    662.0,  // Mwea Constituency (Thiba, Wanguru, Baricho, Tebere)
+  'Kirinyaga West':    307.8,  // Ndia Constituency (Sagana, Kagumo, Kamuthe)
+  'Kirinyaga North':   344.2,  // Gichugu Constituency (Kiamutugu, Mutithi, Kerugoya hills)
+  'Kirinyaga South':   218.0,  // Approximate — covers southern Mwea plains
+};
+
+// Known RUMAWASCO service towns per sub-county, with suggested zone codes
+const SUB_COUNTY_TOWNS: Record<string, { code: string; name: string; description: string }[]> = {
+  'Kirinyaga Central': [
+    { code: 'KRG', name: 'Kerugoya',  description: 'Kerugoya town and surroundings — county HQ service area' },
+    { code: 'KTS', name: 'Kutus',     description: 'Kutus town and peri-urban estates' },
+    { code: 'KGO', name: 'Kagio',     description: 'Kagio market area and residential plots' },
+    { code: 'KNG', name: 'Kianyaga',  description: 'Kianyaga town and Kirinyaga Central border communities' },
+  ],
+  'Kirinyaga East': [
+    { code: 'THB', name: 'Thiba',    description: 'Thiba irrigation scheme and town centre' },
+    { code: 'WGR', name: 'Wanguru',  description: 'Wanguru trading centre and Mwea East settlements' },
+    { code: 'BRC', name: 'Baricho',  description: 'Baricho sub-location and Tana River corridor' },
+    { code: 'TBR', name: 'Tebere',   description: 'Tebere agricultural zone and Mwea scheme blocks' },
+    { code: 'MWA', name: 'Mwea',     description: 'Mwea town centre and NISHATI grid corridor' },
+  ],
+  'Kirinyaga West': [
+    { code: 'SGN', name: 'Sagana',   description: 'Sagana town, Thika Road junction service area' },
+    { code: 'KMT', name: 'Kamuthe',  description: 'Kamuthe and Ndia highlands communities' },
+    { code: 'KGM', name: 'Kagumo',   description: 'Kagumo tea-belt settlements and schools' },
+  ],
+  'Kirinyaga North': [
+    { code: 'KMG', name: 'Kiamutugu', description: 'Kiamutugu and Gichugu highlands service area' },
+    { code: 'MTH', name: 'Mutithi',   description: 'Mutithi ward and Kerugoya hills outskirts' },
+    { code: 'RTH', name: 'Ruiru',     description: 'Ruiru–Rwathe source area — upper catchment' },
+  ],
+  'Kirinyaga South': [
+    { code: 'NGK', name: 'Nguka',    description: 'Nguka plains and lower Mwea South settlements' },
+    { code: 'KBT', name: 'Kibutu',   description: 'Kibutu and southern Mwea irrigation blocks' },
+  ],
+};
+
 // ─── Zone Form ────────────────────────────────────────────────────────────────
 
 const ZoneForm = ({
@@ -55,7 +98,7 @@ const ZoneForm = ({
     subCounty: SUB_COUNTIES[0],
     parentZoneId: '',
     description: '',
-    area: '',
+    area: String(SUB_COUNTY_AREA_KM2[SUB_COUNTIES[0]] ?? ''),
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -72,9 +115,27 @@ const ZoneForm = ({
 
   const selectedParent = regionZones.find(z => z.id === form.parentZoneId);
 
-  // Reset parent zone when sub-county changes
+  // Known towns for the selected sub-county (those not yet created as zones)
+  const suggestedTowns = useMemo(() => {
+    const known = SUB_COUNTY_TOWNS[form.subCounty] ?? [];
+    const existingCodes = new Set(regionZones.map(z => z.code.toUpperCase()));
+    return known.filter(t => !existingCodes.has(t.code.toUpperCase()));
+  }, [form.subCounty, regionZones]);
+
+  // Reset parent zone when sub-county changes; auto-fill area
   const handleSubCountyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setForm(f => ({ ...f, subCounty: e.target.value, parentZoneId: '' }));
+    const sc = e.target.value;
+    setForm(f => ({
+      ...f,
+      subCounty: sc,
+      parentZoneId: '',
+      area: String(SUB_COUNTY_AREA_KM2[sc] ?? ''),
+    }));
+  };
+
+  // Pre-fill form from a suggested town
+  const applyTownSuggestion = (town: { code: string; name: string; description: string }) => {
+    setForm(f => ({ ...f, code: town.code, name: town.name, description: town.description }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -113,15 +174,40 @@ const ZoneForm = ({
         </select>
       </div>
 
-      {/* Existing zones in selected region */}
+      {/* Suggested towns not yet created as zones */}
+      {suggestedTowns.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-1.5">
+            Known RUMAWASCO towns in {form.subCounty} — click to pre-fill:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {suggestedTowns.map(t => (
+              <button
+                key={t.code}
+                type="button"
+                onClick={() => applyTownSuggestion(t)}
+                className={cn(
+                  'px-2.5 py-1 rounded-full text-xs font-medium border transition-all hover:ring-2 hover:ring-offset-1 hover:ring-current',
+                  SUB_COUNTY_COLOR[form.subCounty] ?? 'bg-gray-100 text-gray-600 border-gray-200',
+                  form.code === t.code ? 'ring-2 ring-offset-1 ring-current' : 'opacity-80 hover:opacity-100',
+                )}
+              >
+                {t.code} — {t.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Existing zones in selected region — map to one */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Map to Existing Zone in {form.subCounty}
-          <span className="ml-1 text-xs text-gray-400 font-normal">(optional — links this zone under an existing one)</span>
+          <span className="ml-1 text-xs text-gray-400 font-normal">(optional — groups this zone under an existing one)</span>
         </label>
         {regionZones.length === 0 ? (
           <p className="text-xs text-gray-400 italic py-2 px-3 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-            No existing zones in {form.subCounty} — this will be the first.
+            No existing zones in {form.subCounty} yet — zones created here will appear once saved.
           </p>
         ) : (
           <select className="input-base w-full" value={form.parentZoneId} onChange={set('parentZoneId')}>
