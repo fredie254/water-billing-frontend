@@ -75,6 +75,12 @@ interface SidebarProps {
   onClose: () => void;
 }
 
+const KNOWN_ROLES = new Set<string>([
+  'super_admin','tenant_admin','manager','finance_manager',
+  'billing_officer','customer_service','metering_supervisor',
+  'meter_reader','accountant','auditor','customer',
+]);
+
 export const Sidebar = ({ open, onClose }: SidebarProps) => {
   const { user } = useAuthStore();
   const role = user?.role;
@@ -113,9 +119,14 @@ export const Sidebar = ({ open, onClose }: SidebarProps) => {
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-4 px-3">
           {NAV_GROUPS.map((group) => {
-            const visibleItems = group.items.filter(
-              item => !item.roles || !role || item.roles.includes(role)
-            );
+            const visibleItems = group.items.filter(item => {
+              if (!item.roles) return true;
+              if (!role) return true;
+              if (item.roles.includes(role as UserRole)) return true;
+              // Unknown API role: show all non-customer-only items as staff
+              if (!KNOWN_ROLES.has(role) && item.roles.some(r => r !== 'customer')) return true;
+              return false;
+            });
             if (visibleItems.length === 0) return null;
             return (
               <div key={group.group} className="mb-5">

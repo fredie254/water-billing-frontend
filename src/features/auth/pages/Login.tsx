@@ -7,6 +7,32 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/core/auth/authStore';
 import { authApi } from '@/features/auth/api/auth';
 import { extractError } from '@/core/api/client';
+import type { UserRole } from '@/types';
+
+const ROLE_MAP: Record<string, UserRole> = {
+  admin:               'tenant_admin',
+  super_admin:         'super_admin',
+  tenant_admin:        'tenant_admin',
+  manager:             'manager',
+  billing:             'billing_officer',
+  billing_officer:     'billing_officer',
+  finance:             'finance_manager',
+  finance_manager:     'finance_manager',
+  customer_service:    'customer_service',
+  support:             'customer_service',
+  metering:            'metering_supervisor',
+  metering_supervisor: 'metering_supervisor',
+  reader:              'meter_reader',
+  meter_reader:        'meter_reader',
+  field_officer:       'meter_reader',
+  accountant:          'accountant',
+  auditor:             'auditor',
+  customer:            'customer',
+};
+
+function normalizeRole(raw: string): UserRole {
+  return ROLE_MAP[raw?.toLowerCase()] ?? 'manager';
+}
 
 const schema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -38,8 +64,9 @@ export const Login = () => {
     try {
       setError('');
       const res = await authApi.login(data.email, data.password);
-      setAuth(res.user, res.accessToken, res.refreshToken);
-      navigate(res.user.role === 'customer' ? '/portal' : '/');
+      const user = { ...res.user, role: normalizeRole(res.user.role) };
+      setAuth(user, res.accessToken, res.refreshToken);
+      navigate(user.role === 'customer' ? '/portal' : '/');
     } catch (err) {
       setError(extractError(err));
     }
