@@ -116,6 +116,8 @@ const ConnectionFormComponent = ({ onSuccess, onCancel }: ConnectionFormProps) =
 
 export const Connections = () => {
   const [connections, setConnections] = useState<Connection[]>([]);
+  const [customerMap, setCustomerMap] = useState<Record<string, Customer>>({});
+  const [meterMap, setMeterMap] = useState<Record<string, Meter>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -126,7 +128,31 @@ export const Connections = () => {
     setLoading(true);
     connectionsApi
       .list({ page, pageSize: PAGE_SIZE, search: search || undefined })
-      .then((r) => setConnections(r.data))
+      .then(async (r) => {
+        setConnections(r.data);
+
+        // Resolve customer and meter details the API doesn't eager-load
+        const customerIds = [...new Set(r.data.map((c) => c.customerId).filter(Boolean))];
+        const meterIds    = [...new Set(r.data.map((c) => c.meterId).filter(Boolean))];
+
+        const [custResults, meterResults] = await Promise.all([
+          Promise.allSettled(customerIds.map((id) => customersApi.getOne(id))),
+          Promise.allSettled(meterIds.map((id) => metersApi.getOne(id))),
+        ]);
+
+        const cMap: Record<string, Customer> = {};
+        custResults.forEach((res, i) => {
+          if (res.status === 'fulfilled' && res.value) cMap[customerIds[i]] = res.value;
+        });
+
+        const mMap: Record<string, Meter> = {};
+        meterResults.forEach((res, i) => {
+          if (res.status === 'fulfilled' && res.value) mMap[meterIds[i]] = res.value;
+        });
+
+        setCustomerMap(cMap);
+        setMeterMap(mMap);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   };
@@ -145,9 +171,42 @@ export const Connections = () => {
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const columns: Column<Connection>[] = [
-    { key: 'accountNumber', header: 'Account #', render: (r) => <span className="font-medium text-primary-600">{r.accountNumber}</span> },
-    { key: 'customerName', header: 'Customer', render: (r) => r.customerName ?? '—' },
-    { key: 'meterSerial', header: 'Meter', render: (r) => <span className="font-mono text-xs">{r.meterSerial}</span> },
+    {
+      key: 'accountNumber', header: 'Account #',
+      render: (r) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="font-medium text-primary-600 font-mono text-xs">{r.accountNumber || '—'}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'customerName', header: 'Customer',
+      render: (r) => {
+        const c = customerMap[r.customerId];
+        const name = c?.name ?? r.customerName;
+        const no   = c?.customerNo;
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm text-gray-900">{name ?? '—'}</span>
+            {no && <span className="text-xs font-mono text-gray-400">{no}</span>}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'meterSerial', header: 'Meter',
+      render: (r) => {
+        const m = meterMap[r.meterId];
+        const serial = m?.serialNumber ?? r.meterSerial;
+        const brand  = m?.brand;
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className="font-mono text-xs text-gray-800">{serial ?? '—'}</span>
+            {brand && <span className="text-xs text-gray-400">{brand}</span>}
+          </div>
+        );
+      },
+    },
     { key: 'connectionType', header: 'Type', render: (r) => <span className="capitalize">{r.connectionType}</span> },
     { key: 'tariffName', header: 'Tariff', render: (r) => r.tariffName ?? '—' },
     { key: 'deposit', header: 'Deposit', render: (r) => formatCurrency(r.deposit ?? 0) },
