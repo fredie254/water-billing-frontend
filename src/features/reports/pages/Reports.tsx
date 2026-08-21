@@ -65,6 +65,7 @@ export const Reports = () => {
   const [revenueTrend, setRevenueTrend] = useState<RevenueDataPoint[]>([]);
   const [consumptionTrend, setConsumptionTrend] = useState<ConsumptionDataPoint[]>([]);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [statsError, setStatsError] = useState(false);
   const [loadingTrends, setLoadingTrends] = useState(true);
   const [loadingStats, setLoadingStats] = useState(true);
 
@@ -76,11 +77,11 @@ export const Reports = () => {
   const [loadingMetering, setLoadingMetering] = useState(false);
   const [metersFetched, setMetersFetched] = useState(false);
 
-  // Fetch dashboard stats once on mount
+  // Fetch dashboard stats once on mount; backend /reports/dashboard may return 500
   useEffect(() => {
     reportsApi.getDashboardStats()
       .then(setDashboardStats)
-      .catch(console.error)
+      .catch(() => setStatsError(true))
       .finally(() => setLoadingStats(false));
   }, []);
 
@@ -146,7 +147,8 @@ export const Reports = () => {
   const totalOutstanding = revenueTrend.reduce((s, d) => s + d.outstanding, 0);
   const collectionEff    = totalBilled > 0 ? ((totalCollected / totalBilled) * 100).toFixed(1) : '0.0';
   const totalConsumption = consumptionTrend.reduce((s, d) => s + d.units, 0);
-  const activeConnections = dashboardStats?.activeConnections ?? 1;
+  // Fall back to locally-computed value when dashboard API fails
+  const activeConnections = dashboardStats?.activeConnections ?? Math.max(consumptionTrend[0]?.connections ?? 1, 1);
   const avgConsumption   = consumptionTrend.length > 0
     ? (totalConsumption / consumptionTrend.length / activeConnections).toFixed(1)
     : '0.0';
@@ -219,6 +221,18 @@ export const Reports = () => {
           </button>
         ))}
       </div>
+
+      {/* Backend stats unavailable notice */}
+      {statsError && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+          <span>
+            The <strong>/reports/dashboard</strong> endpoint returned a server error (500). Summary stats are
+            computed from local data — charts and trends are unaffected. Please check the backend logs to resolve
+            the upstream issue.
+          </span>
+        </div>
+      )}
 
       {/* ── Revenue Tab ──────────────────────────────────────────────────────────── */}
       {tab === 'revenue' && (
