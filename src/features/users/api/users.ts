@@ -14,6 +14,9 @@ export const usersApi = {
   update: (id: string, data: Partial<User>) =>
     apiClient.put<{ data: User }>(`/users/${id}`, data).then((r) => r.data.data),
 
+  delete: (id: string) =>
+    apiClient.delete(`/users/${id}`),
+
   deactivate: (id: string) =>
     apiClient.post(`/users/${id}/deactivate`),
 

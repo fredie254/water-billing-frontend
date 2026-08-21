@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   UserPlus, Search, Edit2, History, UserCheck, UserX, CheckCircle2, XCircle, Shield, Lock,
-  Download, LayoutList, Layers,
+  Download, LayoutList, Layers, Trash2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { usersApi } from '@/features/users/api/users';
@@ -142,7 +142,7 @@ type EditForm = z.infer<typeof editSchema>;
 
 // Shared row component used in both list and grouped views
 const UserRow = ({
-  u, canManage, currentUserId, onEdit, onHistory, onToggle, hideRole,
+  u, canManage, currentUserId, onEdit, onHistory, onToggle, onDelete, hideRole,
 }: {
   u: User;
   canManage: boolean;
@@ -150,6 +150,7 @@ const UserRow = ({
   onEdit: (u: User) => void;
   onHistory: (u: User) => void;
   onToggle: (u: User) => void;
+  onDelete: (u: User) => void;
   hideRole?: boolean;
 }) => (
   <tr>
@@ -190,7 +191,7 @@ const UserRow = ({
           <button onClick={() => onHistory(u)} title="Login history" className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-primary-600">
             <History className="w-4 h-4" />
           </button>
-          {u.id !== currentUserId && (
+          {u.id !== currentUserId && (<>
             <button
               onClick={() => onToggle(u)}
               title={u.status === 'active' ? 'Deactivate' : 'Activate'}
@@ -202,7 +203,14 @@ const UserRow = ({
             >
               {u.status === 'active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
             </button>
-          )}
+            <button
+              onClick={() => onDelete(u)}
+              title="Delete user permanently"
+              className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-700"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </>)}
         </div>
       </td>
     )}
@@ -241,6 +249,7 @@ export const Users = () => {
   const [loginHistory, setLoginHistory] = useState<LoginHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [toggleUser, setToggleUser] = useState<User | null>(null);
+  const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const [saving, setSaving] = useState(false);
 
   const inviteForm = useForm<InviteForm>({ resolver: zodResolver(inviteSchema) });
@@ -387,6 +396,20 @@ export const Users = () => {
     } finally {
       setSaving(false);
       setToggleUser(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteUser) return;
+    setSaving(true);
+    try {
+      await usersApi.delete(deleteUser.id);
+      setUsers(prev => prev.filter(u => u.id !== deleteUser.id));
+    } catch {
+      // handle silently
+    } finally {
+      setSaving(false);
+      setDeleteUser(null);
     }
   };
 
@@ -617,7 +640,7 @@ export const Users = () => {
                 ) : filtered.length === 0 ? (
                   <tr><td colSpan={canManage ? 8 : 7} className="text-center py-12 text-gray-400 text-sm">No users match your filters</td></tr>
                 ) : filtered.map(u => (
-                  <UserRow key={u.id} u={u} canManage={canManage} currentUserId={currentUser?.id} onEdit={openEdit} onHistory={openHistory} onToggle={setToggleUser} />
+                  <UserRow key={u.id} u={u} canManage={canManage} currentUserId={currentUser?.id} onEdit={openEdit} onHistory={openHistory} onToggle={setToggleUser} onDelete={setDeleteUser} />
                 ))}
               </tbody>
             </table>
@@ -663,7 +686,7 @@ export const Users = () => {
                   </thead>
                   <tbody>
                     {roleUsers.map(u => (
-                      <UserRow key={u.id} u={u} canManage={canManage} currentUserId={currentUser?.id} onEdit={openEdit} onHistory={openHistory} onToggle={setToggleUser} hideRole />
+                      <UserRow key={u.id} u={u} canManage={canManage} currentUserId={currentUser?.id} onEdit={openEdit} onHistory={openHistory} onToggle={setToggleUser} onDelete={setDeleteUser} hideRole />
                     ))}
                   </tbody>
                 </table>
@@ -837,6 +860,18 @@ export const Users = () => {
         }
         confirmLabel={toggleUser?.status === 'active' ? 'Deactivate' : 'Activate'}
         confirmVariant={toggleUser?.status === 'active' ? 'danger' : 'primary'}
+      />
+
+      {/* Delete user confirm */}
+      <ConfirmDialog
+        open={!!deleteUser}
+        onClose={() => setDeleteUser(null)}
+        onConfirm={handleDelete}
+        loading={saving}
+        title="Delete User"
+        message={`Permanently delete ${deleteUser?.name} (${deleteUser?.email})? This cannot be undone — all their data and access will be removed.`}
+        confirmLabel="Delete Permanently"
+        confirmVariant="danger"
       />
       </>)}
     </div>
