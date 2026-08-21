@@ -134,6 +134,7 @@ export const Connections = () => {
         // Resolve customer and meter details the API doesn't eager-load
         const customerIds = [...new Set(r.data.map((c) => c.customerId).filter(Boolean))];
         const meterIds    = [...new Set(r.data.map((c) => c.meterId).filter(Boolean))];
+        console.debug('[connections] meterIds:', meterIds, '| sample conn meterId:', r.data[0]?.meterId, '| raw conn[0]:', r.data[0]);
 
         const [custResults, meterResults] = await Promise.all([
           Promise.allSettled(customerIds.map((id) => customersApi.getOne(id))),
