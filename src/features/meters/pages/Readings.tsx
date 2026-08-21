@@ -146,7 +146,10 @@ const RecordReadingForm = ({
         {...register('connectionId')}
         error={errors.connectionId?.message}
         placeholder="Select account"
-        options={connections.map((c) => ({ value: c.id, label: `${c.accountNumber} — ${c.customerName}` }))}
+        options={connections.map((c) => ({
+          value: c.id,
+          label: `${c.accountNumber || c.id.slice(0, 8)}${c.customerName ? ` — ${c.customerName}` : ''}`,
+        }))}
       />
 
       {conn && (
@@ -275,17 +278,16 @@ export const Readings = () => {
     fetchReadings();
   }, [fetchReadings]);
 
-  // Fetch connections for the record-reading form, then resolve customers and meters
+  // Fetch connections, then resolve customers and meters for all connections.
+  // Enriches the connections array so the form dropdown and info panel get real names/serials.
   useEffect(() => {
     connectionsApi.list({ pageSize: 100 })
       .then(async (r) => {
-        setConnections(r.data);
-
         const custIds  = [...new Set(r.data.map((c) => c.customerId).filter(Boolean))];
         const meterIds = [...new Set(r.data.map((c) => c.meterId).filter(Boolean))];
 
         const [custResults, meterResults] = await Promise.all([
-          Promise.allSettled(custIds.map((id) => customersApi.getOne(id))),
+          Promise.allSettled(custIds.map((id)  => customersApi.getOne(id))),
           Promise.allSettled(meterIds.map((id) => metersApi.getOne(id))),
         ]);
 
@@ -301,6 +303,15 @@ export const Readings = () => {
 
         setCustomerMap(cMap);
         setMeterMap(mMap);
+
+        // Re-set connections enriched with resolved customerName and meterSerial
+        // so the form dropdown and info panel show real data without extra prop drilling
+        const enriched = r.data.map((c) => ({
+          ...c,
+          customerName: c.customerName ?? cMap[c.customerId]?.name,
+          meterSerial:  c.meterSerial  ?? mMap[c.meterId]?.serialNumber,
+        }));
+        setConnections(enriched);
       })
       .catch((err) => console.error('Failed to fetch connections:', err));
   }, []);
