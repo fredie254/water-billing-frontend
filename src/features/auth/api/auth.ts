@@ -3,13 +3,13 @@ import type { AuthResponse, User } from '@/types';
 
 export const authApi = {
   login: (email: string, password: string) =>
-    apiClient.post<AuthResponse>('/auth/login', { email, password }).then((r) => r.data),
+    apiClient.post<{ data: AuthResponse }>('/auth/login', { email, password }).then((r) => r.data.data),
 
   logout: (refreshToken: string) =>
     apiClient.post('/auth/logout', { refreshToken }),
 
   refreshToken: (refreshToken: string) =>
-    apiClient.post<{ accessToken: string }>('/auth/refresh', { refreshToken }).then((r) => r.data),
+    apiClient.post<{ data: { accessToken: string } }>('/auth/refresh', { refreshToken }).then((r) => r.data.data),
 
   forgotPassword: (email: string) =>
     apiClient.post('/auth/forgot-password', { email }),
