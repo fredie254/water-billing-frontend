@@ -16,7 +16,12 @@ function toCamelCase(str: string): string {
 
 function convertKeys(obj: unknown, convert: (k: string) => string): unknown {
   if (Array.isArray(obj)) return obj.map((v) => convertKeys(v, convert));
-  if (obj !== null && typeof obj === 'object' && !(obj instanceof Blob) && !(obj instanceof FormData)) {
+  if (
+    obj !== null &&
+    typeof obj === 'object' &&
+    !(obj instanceof Blob) &&
+    !(obj instanceof FormData)
+  ) {
     return Object.fromEntries(
       Object.entries(obj as Record<string, unknown>).map(([k, v]) => [
         convert(k),
@@ -35,10 +40,18 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Outgoing: attach token + convert request body/params to snake_case
+// ── Request interceptor ───────────────────────────────────────────────────────
+// Attach Bearer token + convert body/params to snake_case
+
 apiClient.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  if (token) {
+    // Use bracket notation — avoids any AxiosHeaders property-descriptor quirks
+    config.headers['Authorization'] = `Bearer ${token}`;
+  } else {
+    console.debug('[RUMAWASCO] No token for request:', config.url);
+  }
 
   if (config.data && !(config.data instanceof FormData)) {
     config.data = convertKeys(config.data, toSnakeCase);
@@ -50,7 +63,9 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Incoming: convert response keys to camelCase; handle 401
+// ── Response interceptor ──────────────────────────────────────────────────────
+// Convert response keys to camelCase; redirect to login on 401 only
+
 apiClient.interceptors.response.use(
   (res) => {
     if (res.data && !(res.data instanceof Blob)) {
@@ -59,18 +74,17 @@ apiClient.interceptors.response.use(
     return res;
   },
   (error: AxiosError) => {
-    const status = error.response?.status;
-    if (status === 401 || status === 403) {
-      const msg = (error.response?.data as Record<string, unknown>)?.message as string | undefined;
-      // Only auto-logout on genuine auth failures, not business-logic 403s
-      if (!msg || /not authenticated|unauthorized|invalid token|token expired/i.test(msg)) {
-        useAuthStore.getState().logout();
-        window.location.href = '/login';
-      }
+    // Only auto-logout on 401 Unauthorized — genuine auth failure
+    // 403 Forbidden may be a permissions issue on a specific resource (not a lost session)
+    if (error.response?.status === 401) {
+      useAuthStore.getState().logout();
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   },
 );
+
+// ── Error helper ──────────────────────────────────────────────────────────────
 
 export const extractError = (error: unknown): string => {
   const e = error as AxiosError<{ message?: string; detail?: string }>;
