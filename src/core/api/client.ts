@@ -120,6 +120,11 @@ export function unwrapList<T>(raw: unknown): UnwrappedList<T> {
     (Array.isArray(payload) ? {} : payload)
   ) as Record<string, unknown>;
 
+  // Diagnostic — remove once API shapes are confirmed
+  console.debug('[unwrapList] body keys:', Object.keys(body));
+  console.debug('[unwrapList] payload type:', Array.isArray(payload) ? `array(${(payload as unknown[]).length})` : typeof payload, Array.isArray(payload) ? '' : `keys: ${Object.keys(payload ?? {}).join(', ')}`);
+  console.debug('[unwrapList] items.length:', items.length, '| total:', pg?.total ?? pg?.totalItems ?? pg?.count ?? items.length);
+
   return {
     data: items,
     pagination: {
