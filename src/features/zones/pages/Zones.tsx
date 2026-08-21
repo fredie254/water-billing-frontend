@@ -40,13 +40,42 @@ const SUB_COUNTIES = [
 
 // ─── Zone Form ────────────────────────────────────────────────────────────────
 
-const ZoneForm = ({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) => {
-  const [form, setForm] = useState({ code: '', name: '', subCounty: SUB_COUNTIES[0], description: '', area: '' });
+const ZoneForm = ({
+  existingZones,
+  onSuccess,
+  onCancel,
+}: {
+  existingZones: Zone[];
+  onSuccess: () => void;
+  onCancel: () => void;
+}) => {
+  const [form, setForm] = useState({
+    code: '',
+    name: '',
+    subCounty: SUB_COUNTIES[0],
+    parentZoneId: '',
+    description: '',
+    area: '',
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-    setForm(f => ({ ...f, [k]: e.target.value }));
+  const set = (k: keyof typeof form) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+      setForm(f => ({ ...f, [k]: e.target.value }));
+
+  // Zones in the currently selected sub-county
+  const regionZones = useMemo(
+    () => existingZones.filter(z => z.subCounty === form.subCounty),
+    [existingZones, form.subCounty],
+  );
+
+  const selectedParent = regionZones.find(z => z.id === form.parentZoneId);
+
+  // Reset parent zone when sub-county changes
+  const handleSubCountyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setForm(f => ({ ...f, subCounty: e.target.value, parentZoneId: '' }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +89,8 @@ const ZoneForm = ({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: ()
         subCounty: form.subCounty,
         description: form.description.trim() || undefined,
         area: form.area ? Number(form.area) : undefined,
-      });
+        ...(form.parentZoneId ? { parentZoneId: form.parentZoneId } : {}),
+      } as Parameters<typeof zonesApi.create>[0]);
       onSuccess();
     } catch (err) {
       setError(extractError(err));
@@ -71,31 +101,77 @@ const ZoneForm = ({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: ()
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Zone Code *</label>
-          <input className="input-base" placeholder="e.g. KRG" value={form.code} onChange={set('code')} maxLength={10} />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Zone Name *</label>
-          <input className="input-base" placeholder="e.g. Kerugoya" value={form.name} onChange={set('name')} />
-        </div>
-      </div>
+      {error && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
+      )}
+
+      {/* Sub-county first — drives zone list below */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Sub-County *</label>
-        <select className="input-base w-full" value={form.subCounty} onChange={set('subCounty')}>
+        <select className="input-base w-full" value={form.subCounty} onChange={handleSubCountyChange}>
           {SUB_COUNTIES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
+
+      {/* Existing zones in selected region */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Map to Existing Zone in {form.subCounty}
+          <span className="ml-1 text-xs text-gray-400 font-normal">(optional — links this zone under an existing one)</span>
+        </label>
+        {regionZones.length === 0 ? (
+          <p className="text-xs text-gray-400 italic py-2 px-3 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+            No existing zones in {form.subCounty} — this will be the first.
+          </p>
+        ) : (
+          <select className="input-base w-full" value={form.parentZoneId} onChange={set('parentZoneId')}>
+            <option value="">— None (standalone zone) —</option>
+            {regionZones.map(z => (
+              <option key={z.id} value={z.id}>
+                {z.code} — {z.name}
+                {z.totalConnections ? ` (${z.totalConnections} connections)` : ''}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {/* Selected parent zone preview */}
+        {selectedParent && (
+          <div className={cn('mt-2 px-3 py-2 rounded-lg border text-xs', SUB_COUNTY_COLOR[selectedParent.subCounty] ?? 'bg-gray-50 border-gray-200 text-gray-700')}>
+            <span className="font-semibold">{selectedParent.code}</span> · {selectedParent.name}
+            {selectedParent.description && <span className="ml-2 opacity-75">— {selectedParent.description}</span>}
+            <span className="ml-2 opacity-75">· {selectedParent.activeConnections ?? 0} active / {selectedParent.totalConnections ?? 0} total connections</span>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Zone Code *</label>
+          <input className="input-base" placeholder="e.g. KRG2" value={form.code} onChange={set('code')} maxLength={10} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Zone Name *</label>
+          <input className="input-base" placeholder="e.g. Kerugoya South" value={form.name} onChange={set('name')} />
+        </div>
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-        <textarea className="input-base w-full" rows={2} placeholder="Brief description of the zone…" value={form.description} onChange={set('description')} />
+        <textarea
+          className="input-base w-full"
+          rows={2}
+          placeholder="Brief description of the zone…"
+          value={form.description}
+          onChange={set('description')}
+        />
       </div>
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Area (km²)</label>
         <input className="input-base" type="number" step="0.01" placeholder="e.g. 12.5" value={form.area} onChange={set('area')} />
       </div>
+
       <div className="flex justify-end gap-3 pt-2">
         <Button variant="secondary" type="button" onClick={onCancel}>Cancel</Button>
         <Button type="submit" loading={saving}>Create Zone</Button>
@@ -611,6 +687,7 @@ export const Zones = () => {
       {/* Zone form modal */}
       <Modal open={showZoneForm} onClose={() => setShowZoneForm(false)} title="New Zone" size="md">
         <ZoneForm
+          existingZones={zones}
           onSuccess={() => { setShowZoneForm(false); fetchZones(); }}
           onCancel={() => setShowZoneForm(false)}
         />
