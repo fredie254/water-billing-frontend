@@ -288,42 +288,30 @@ export const Readings = () => {
     fetchReadings();
   }, [fetchReadings]);
 
-  // Fetch connections, then resolve customers and meters for all connections.
-  // Enriches the connections array so the form dropdown and info panel get real names/serials.
+  // Fetch connections + all customers + all meters in parallel (3 requests total).
+  // Replaces the previous N+1 pattern that fired one getOne per customer/meter.
   useEffect(() => {
-    connectionsApi.list({ pageSize: 100 })
-      .then(async (r) => {
-        const custIds  = [...new Set(r.data.map((c) => c.customerId).filter(Boolean))];
-        const meterIds = [...new Set(r.data.map((c) => c.meterId).filter(Boolean))];
+    Promise.all([
+      connectionsApi.list({ pageSize: 500 }),
+      customersApi.list({ pageSize: 500 }),
+      metersApi.list({ pageSize: 500 }),
+    ]).then(([connRes, custRes, meterRes]) => {
+      const cMap: Record<string, Customer> = {};
+      custRes.data.forEach((c) => { cMap[c.id] = c; });
 
-        const [custResults, meterResults] = await Promise.all([
-          Promise.allSettled(custIds.map((id)  => customersApi.getOne(id))),
-          Promise.allSettled(meterIds.map((id) => metersApi.getOne(id))),
-        ]);
+      const mMap: Record<string, Meter> = {};
+      meterRes.data.forEach((m) => { mMap[m.id] = m; });
 
-        const cMap: Record<string, Customer> = {};
-        custResults.forEach((res, i) => {
-          if (res.status === 'fulfilled' && res.value) cMap[custIds[i]] = res.value;
-        });
+      setCustomerMap(cMap);
+      setMeterMap(mMap);
 
-        const mMap: Record<string, Meter> = {};
-        meterResults.forEach((res, i) => {
-          if (res.status === 'fulfilled' && res.value) mMap[meterIds[i]] = res.value;
-        });
-
-        setCustomerMap(cMap);
-        setMeterMap(mMap);
-
-        // Re-set connections enriched with resolved customerName and meterSerial
-        // so the form dropdown and info panel show real data without extra prop drilling
-        const enriched = r.data.map((c) => ({
-          ...c,
-          customerName: c.customerName ?? cMap[c.customerId]?.name,
-          meterSerial:  c.meterSerial  ?? mMap[c.meterId]?.serialNumber,
-        }));
-        setConnections(enriched);
-      })
-      .catch((err) => console.error('Failed to fetch connections:', err));
+      const enriched = connRes.data.map((c) => ({
+        ...c,
+        customerName: c.customerName ?? cMap[c.customerId]?.name,
+        meterSerial:  c.meterSerial  ?? mMap[c.meterId]?.serialNumber,
+      }));
+      setConnections(enriched);
+    }).catch((err) => console.error('Failed to load connections/customers/meters:', err));
   }, []);
 
   // ── derived counts (from current page; summary cards are approximate) ──────
