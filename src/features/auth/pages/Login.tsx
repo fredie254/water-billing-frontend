@@ -10,7 +10,8 @@ import { extractError } from '@/core/api/client';
 import type { UserRole } from '@/types';
 
 const ROLE_MAP: Record<string, UserRole> = {
-  admin:               'tenant_admin',
+  admin:               'super_admin',
+  system_admin:        'super_admin',
   super_admin:         'super_admin',
   tenant_admin:        'tenant_admin',
   manager:             'manager',
