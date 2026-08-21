@@ -8,8 +8,9 @@ import { ConfirmDialog } from '@/shared/components/ui/Modal';
 import { PropertyForm } from './PropertyForm';
 import { propertiesApi } from '@/features/properties/api/properties';
 import { zonesApi } from '@/features/zones/api/zones';
+import { customersApi } from '@/features/customers/api/customers';
 import { formatDate, cn } from '@/shared/utils/utils';
-import type { Property, PropertyType, PropertyConnectionStatus, Zone } from '@/types';
+import type { Property, PropertyType, PropertyConnectionStatus, Zone, Customer } from '@/types';
 
 const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
   residential:   'Residential',
@@ -35,6 +36,7 @@ export const Properties = () => {
   const navigate = useNavigate();
   const [properties, setProperties] = useState<Property[]>([]);
   const [zones, setZones]           = useState<Zone[]>([]);
+  const [customerMap, setCustomerMap] = useState<Record<string, Customer>>({});
   const [loading, setLoading]       = useState(true);
   const [search,      setSearch]      = useState('');
   const [typeFilter,  setTypeFilter]  = useState<PropertyType | ''>('');
@@ -49,8 +51,7 @@ export const Properties = () => {
     setLoading(true);
     propertiesApi
       .list({ pageSize: 100 })
-      .then((r) => {
-        // Derive connectionStatus from connections array when the API omits the field
+      .then(async (r) => {
         const normalized = r.data.map((p) => ({
           ...p,
           connectionStatus: p.connectionStatus ?? (
@@ -60,6 +61,15 @@ export const Properties = () => {
           ) as PropertyConnectionStatus,
         }));
         setProperties(normalized);
+
+        // Fetch customer details for each unique customer_id
+        const ids = [...new Set(normalized.map((p) => p.customerId).filter(Boolean))];
+        const results = await Promise.allSettled(ids.map((id) => customersApi.getOne(id)));
+        const map: Record<string, Customer> = {};
+        results.forEach((res, i) => {
+          if (res.status === 'fulfilled' && res.value) map[ids[i]] = res.value;
+        });
+        setCustomerMap(map);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -77,11 +87,13 @@ export const Properties = () => {
 
   const filtered = useMemo(() => properties.filter((p) => {
     const q = search.toLowerCase();
+    const customer = p.customerId ? customerMap[p.customerId] : undefined;
     const matchesSearch =
       search === '' ||
       p.address.toLowerCase().includes(q) ||
       (p.plotNumber?.toLowerCase().includes(q) ?? false) ||
       (p.customerName?.toLowerCase().includes(q) ?? false) ||
+      (customer?.name?.toLowerCase().includes(q) ?? false) ||
       (p.occupantName?.toLowerCase().includes(q) ?? false) ||
       p.id.toLowerCase().includes(q);
     const matchesType = typeFilter === '' || p.propertyType === typeFilter;
@@ -150,14 +162,22 @@ export const Properties = () => {
     },
     {
       key: 'customerName', header: 'Owner',
-      render: (r) => (
-        <div>
-          <p className="text-sm text-gray-900">{r.customerName ?? '—'}</p>
-          {r.occupantName && r.occupantName !== r.customerName && (
-            <p className="text-xs text-gray-400">Occ: {r.occupantName}</p>
-          )}
-        </div>
-      ),
+      render: (r) => {
+        const c = r.customerId ? customerMap[r.customerId] : undefined;
+        const name    = c?.name      ?? r.customerName ?? '—';
+        const custNo  = c ? ((c as unknown as Record<string, unknown>).customerNumber ?? c.customerNo) as string | undefined : undefined;
+        const phone   = c?.phone     ?? r.ownerPhone;
+        return (
+          <div className="flex flex-col gap-0.5">
+            <p className="text-sm font-medium text-gray-900">{name}</p>
+            {custNo && <p className="text-xs font-mono text-primary-600">{custNo}</p>}
+            {phone && <p className="text-xs text-gray-400">{phone}</p>}
+            {r.occupantName && r.occupantName !== name && (
+              <p className="text-xs text-gray-400">Occ: {r.occupantName}</p>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'connectionStatus', header: 'Connection',
