@@ -129,7 +129,7 @@ const RecordReadingForm = ({
         meterId:         conn?.meterId ?? '',
         meterSerial:     conn?.meterSerial,
         customerName:    conn?.customerName,
-        readingValue:    data.readingValue,
+        currentReading:  data.readingValue,   // backend field: current_reading
         previousReading: prevReading,
         unitsConsumed:   v.consumption,
         readingDate:     data.readingDate,

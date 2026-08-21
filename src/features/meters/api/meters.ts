@@ -73,7 +73,7 @@ export const readingsApi = {
       return (b?.data ?? b) as MeterReading;
     }),
 
-  create: (data: Partial<MeterReading> & { meterId?: string; connectionId?: string }) =>
+  create: (data: Partial<MeterReading> & { meterId?: string; connectionId?: string; currentReading?: number }) =>
     apiClient.post('/meter-readings', data).then((r) => {
       const b = r.data as Record<string, unknown>;
       return (b?.data ?? b) as MeterReading;
