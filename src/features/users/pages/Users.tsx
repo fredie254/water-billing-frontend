@@ -1,9 +1,10 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   UserPlus, Search, Edit2, History, UserCheck, UserX, CheckCircle2, XCircle, Shield, Lock,
+  Download, LayoutList, Layers,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { usersApi } from '@/features/users/api/users';
@@ -14,7 +15,14 @@ import { ROLE_PERMISSIONS } from '@/types';
 import { cn } from '@/shared/utils/utils';
 import { useAuthStore } from '@/core/auth/authStore';
 
-type PageTab = 'users' | 'roles';
+type PageTab  = 'users' | 'roles';
+type ViewMode = 'list' | 'grouped';
+
+// Ordered list of roles by access level for the grouped view
+const ROLE_ORDER: UserRole[] = [
+  'super_admin','tenant_admin','manager','finance_manager','billing_officer',
+  'customer_service','metering_supervisor','meter_reader','accountant','auditor','customer',
+];
 
 const ROLE_LABELS: Record<UserRole, string> = {
   super_admin:         'Super Admin',
@@ -132,6 +140,75 @@ const editSchema = z.object({
 });
 type EditForm = z.infer<typeof editSchema>;
 
+// Shared row component used in both list and grouped views
+const UserRow = ({
+  u, canManage, currentUserId, onEdit, onHistory, onToggle, hideRole,
+}: {
+  u: User;
+  canManage: boolean;
+  currentUserId?: string;
+  onEdit: (u: User) => void;
+  onHistory: (u: User) => void;
+  onToggle: (u: User) => void;
+  hideRole?: boolean;
+}) => (
+  <tr>
+    <td>
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-sm flex-shrink-0">
+          {u.name.charAt(0).toUpperCase()}
+        </div>
+        <div>
+          <p className="font-medium text-gray-900 text-sm">{u.name}</p>
+          <p className="text-xs text-gray-500">{u.email}</p>
+        </div>
+      </div>
+    </td>
+    {!hideRole && (
+      <td><span className={cn('badge', ROLE_BADGE[u.role])}>{ROLE_LABELS[u.role]}</span></td>
+    )}
+    {!hideRole && (
+      <td><span className="inline-flex items-center justify-center w-6 h-6 rounded bg-gray-100 text-gray-600 text-xs font-bold">{ROLE_LEVEL[u.role]}</span></td>
+    )}
+    <td>
+      <span className={cn('badge',
+        u.status === 'active' ? 'badge-green' :
+        u.status === 'suspended' ? 'badge-red' : 'badge-gray'
+      )}>
+        {u.status}
+      </span>
+    </td>
+    <td className="text-sm text-gray-600">{fmtRelative(u.lastLogin)}</td>
+    <td className="text-sm text-gray-600">{u.phone ?? '—'}</td>
+    <td className="text-sm text-gray-500">{format(new Date(u.createdAt), 'dd MMM yyyy')}</td>
+    {canManage && (
+      <td>
+        <div className="flex items-center justify-end gap-1">
+          <button onClick={() => onEdit(u)} title="Edit user" className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+            <Edit2 className="w-4 h-4" />
+          </button>
+          <button onClick={() => onHistory(u)} title="Login history" className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-primary-600">
+            <History className="w-4 h-4" />
+          </button>
+          {u.id !== currentUserId && (
+            <button
+              onClick={() => onToggle(u)}
+              title={u.status === 'active' ? 'Deactivate' : 'Activate'}
+              className={cn('p-1.5 rounded-lg',
+                u.status === 'active'
+                  ? 'text-gray-400 hover:bg-red-50 hover:text-red-600'
+                  : 'text-gray-400 hover:bg-green-50 hover:text-green-600'
+              )}
+            >
+              {u.status === 'active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+            </button>
+          )}
+        </div>
+      </td>
+    )}
+  </tr>
+);
+
 const fmtDate = (iso: string) => {
   try { return format(new Date(iso), 'dd MMM yyyy, HH:mm'); } catch { return iso; }
 };
@@ -150,6 +227,7 @@ const fmtRelative = (iso?: string): string => {
 export const Users = () => {
   const { user: currentUser } = useAuthStore();
   const [tab, setTab] = useState<PageTab>('users');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [users, setUsers] = useState<User[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -171,7 +249,7 @@ export const Users = () => {
   // ── Fetch users ──
   const fetchUsers = useCallback(() => {
     setUsersLoading(true);
-    const params: Record<string, unknown> = { limit: 200 };
+    const params: Record<string, unknown> = { pageSize: 200 };
     if (search)       params.search = search;
     if (roleFilter)   params.role = roleFilter;
     if (statusFilter) params.status = statusFilter;
@@ -197,6 +275,38 @@ export const Users = () => {
       (!statusFilter || u.status === statusFilter)
     );
   });
+
+  // Users grouped by role level for the grouped view
+  const grouped = useMemo(() => {
+    return ROLE_ORDER
+      .map(role => ({ role, users: filtered.filter(u => u.role === role) }))
+      .filter(g => g.users.length > 0);
+  }, [filtered]);
+
+  // CSV export
+  const exportCSV = () => {
+    const rows = [
+      ['Name', 'Email', 'Phone', 'Role', 'Access Level', 'Status', 'Last Login', 'Joined'],
+      ...filtered.map(u => [
+        u.name,
+        u.email,
+        u.phone ?? '',
+        ROLE_LABELS[u.role],
+        ROLE_LEVEL[u.role],
+        u.status,
+        u.lastLogin ? fmtRelative(u.lastLogin) : 'Never',
+        u.createdAt ? format(new Date(u.createdAt), 'dd/MM/yyyy') : '',
+      ]),
+    ];
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = Object.assign(document.createElement('a'), { href: url, download: 'system-users.csv' });
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const openEdit = (u: User) => {
     setEditUser(u);
@@ -290,13 +400,43 @@ export const Users = () => {
           <h1 className="text-2xl font-bold text-gray-900">Users & Access Control</h1>
           <p className="text-sm text-gray-500 mt-0.5">Manage system users, roles, and granular permissions</p>
         </div>
-        <div className="flex gap-2">
-          {canManage && tab === 'users' && (
-            <button className="btn-primary btn-sm flex items-center gap-1.5" onClick={() => setShowInvite(true)}>
-              <UserPlus className="w-4 h-4" /> Invite User
+        {tab === 'users' && (
+          <div className="flex items-center gap-2">
+            {/* View mode toggle */}
+            <div className="flex items-center rounded-lg border border-gray-200 overflow-hidden">
+              <button
+                title="List view"
+                onClick={() => setViewMode('list')}
+                className={cn('px-2.5 py-1.5 text-xs flex items-center gap-1 transition-colors',
+                  viewMode === 'list' ? 'bg-primary-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'
+                )}
+              >
+                <LayoutList className="w-3.5 h-3.5" /> List
+              </button>
+              <button
+                title="Group by role"
+                onClick={() => setViewMode('grouped')}
+                className={cn('px-2.5 py-1.5 text-xs flex items-center gap-1 transition-colors border-l border-gray-200',
+                  viewMode === 'grouped' ? 'bg-primary-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'
+                )}
+              >
+                <Layers className="w-3.5 h-3.5" /> By Role
+              </button>
+            </div>
+            <button
+              onClick={exportCSV}
+              className="btn-secondary btn-sm flex items-center gap-1.5"
+              title="Export to Excel / CSV"
+            >
+              <Download className="w-4 h-4" /> Export
             </button>
-          )}
-        </div>
+            {canManage && (
+              <button className="btn-primary btn-sm flex items-center gap-1.5" onClick={() => setShowInvite(true)}>
+                <UserPlus className="w-4 h-4" /> Invite User
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -454,110 +594,87 @@ export const Users = () => {
         </select>
       </div>
 
-      {/* Table */}
-      <div className="card">
-        <div className="table-container">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Last Login</th>
-                <th>Phone</th>
-                <th>Joined</th>
-                {canManage && <th className="text-right">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {usersLoading ? (
+      {/* ── List view ── */}
+      {viewMode === 'list' && (
+        <div className="card">
+          <div className="table-container">
+            <table className="table">
+              <thead>
                 <tr>
-                  <td colSpan={canManage ? 7 : 6} className="text-center py-12 text-gray-400 text-sm">
-                    Loading users…
-                  </td>
+                  <th>User</th>
+                  <th>Role</th>
+                  <th>Level</th>
+                  <th>Status</th>
+                  <th>Last Login</th>
+                  <th>Phone</th>
+                  <th>Joined</th>
+                  {canManage && <th className="text-right">Actions</th>}
                 </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={canManage ? 7 : 6} className="text-center py-12 text-gray-400 text-sm">
-                    No users match your filters
-                  </td>
-                </tr>
-              ) : filtered.map(u => (
-                <tr key={u.id}>
-                  <td>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-sm flex-shrink-0">
-                        {u.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900 text-sm">{u.name}</p>
-                        <p className="text-xs text-gray-500">{u.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={cn('badge', ROLE_BADGE[u.role])}>
-                      {ROLE_LABELS[u.role]}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={cn('badge',
-                      u.status === 'active' ? 'badge-green' :
-                      u.status === 'suspended' ? 'badge-red' : 'badge-gray'
-                    )}>
-                      {u.status}
-                    </span>
-                  </td>
-                  <td className="text-sm text-gray-600">{fmtRelative(u.lastLogin)}</td>
-                  <td className="text-sm text-gray-600">{u.phone ?? '—'}</td>
-                  <td className="text-sm text-gray-500">
-                    {format(new Date(u.createdAt), 'dd MMM yyyy')}
-                  </td>
-                  {canManage && (
-                    <td>
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => openEdit(u)}
-                          title="Edit user"
-                          className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => openHistory(u)}
-                          title="Login history"
-                          className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-primary-600"
-                        >
-                          <History className="w-4 h-4" />
-                        </button>
-                        {u.id !== currentUser?.id && (
-                          <button
-                            onClick={() => setToggleUser(u)}
-                            title={u.status === 'active' ? 'Deactivate' : 'Activate'}
-                            className={cn('p-1.5 rounded-lg',
-                              u.status === 'active'
-                                ? 'text-gray-400 hover:bg-red-50 hover:text-red-600'
-                                : 'text-gray-400 hover:bg-green-50 hover:text-green-600'
-                            )}
-                          >
-                            {u.status === 'active'
-                              ? <UserX className="w-4 h-4" />
-                              : <UserCheck className="w-4 h-4" />
-                            }
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {usersLoading ? (
+                  <tr><td colSpan={canManage ? 8 : 7} className="text-center py-12 text-gray-400 text-sm">Loading users…</td></tr>
+                ) : filtered.length === 0 ? (
+                  <tr><td colSpan={canManage ? 8 : 7} className="text-center py-12 text-gray-400 text-sm">No users match your filters</td></tr>
+                ) : filtered.map(u => (
+                  <UserRow key={u.id} u={u} canManage={canManage} currentUserId={currentUser?.id} onEdit={openEdit} onHistory={openHistory} onToggle={setToggleUser} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="px-4 py-3 border-t border-gray-100 text-xs text-gray-400">
+            Showing {filtered.length} of {total} users
+          </div>
         </div>
-        <div className="px-4 py-3 border-t border-gray-100 text-xs text-gray-400">
-          Showing {filtered.length} of {total} users
+      )}
+
+      {/* ── Grouped by role view ── */}
+      {viewMode === 'grouped' && (
+        <div className="space-y-4">
+          {usersLoading ? (
+            <div className="card p-12 text-center text-gray-400 text-sm">Loading users…</div>
+          ) : grouped.length === 0 ? (
+            <div className="card p-12 text-center text-gray-400 text-sm">No users match your filters</div>
+          ) : grouped.map(({ role, users: roleUsers }) => (
+            <div key={role} className="card overflow-hidden">
+              {/* Group header */}
+              <div className="flex items-center gap-3 px-5 py-3 bg-gray-50 border-b border-gray-200">
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-water-100 text-water-700 text-xs font-bold flex-shrink-0">
+                  {ROLE_LEVEL[role]}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <span className="font-semibold text-gray-900 text-sm">{ROLE_LABELS[role]}</span>
+                  <span className="text-xs text-gray-400 ml-2">{ROLE_DESCRIPTION[role]}</span>
+                </div>
+                <span className={cn('badge ml-auto', ROLE_BADGE[role])}>{roleUsers.length} user{roleUsers.length !== 1 ? 's' : ''}</span>
+              </div>
+              {/* Users in this group */}
+              <div className="table-container">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Status</th>
+                      <th>Last Login</th>
+                      <th>Phone</th>
+                      <th>Joined</th>
+                      {canManage && <th className="text-right">Actions</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {roleUsers.map(u => (
+                      <UserRow key={u.id} u={u} canManage={canManage} currentUserId={currentUser?.id} onEdit={openEdit} onHistory={openHistory} onToggle={setToggleUser} hideRole />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+          <div className="text-xs text-gray-400 px-1">
+            Showing {filtered.length} of {total} users across {grouped.length} role{grouped.length !== 1 ? 's' : ''}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Invite Modal */}
       <Modal

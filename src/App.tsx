@@ -104,7 +104,7 @@ export default function App() {
           </RoleGuard>
         } />
         <Route path="/users" element={
-          <RoleGuard roles={['super_admin','tenant_admin']}>
+          <RoleGuard roles={['super_admin','tenant_admin','manager']}>
             <Users />
           </RoleGuard>
         } />
