@@ -124,11 +124,11 @@ const RecordReadingForm = ({
     try {
       await readingsApi.create({
         connectionId:   data.connectionId,
-        meterId:        conn?.meterId ?? '',
         currentReading: data.readingValue,
         readingDate:    data.readingDate,
-        readingType:    data.readingType,
-        notes:          data.notes || undefined,
+        ...(data.readingType && { readingType: data.readingType }),
+        ...(data.notes       && { notes:       data.notes }),
+        ...(conn?.meterId    && { meterId:      conn.meterId }),
       });
       onSuccess();
     } catch (err) {
