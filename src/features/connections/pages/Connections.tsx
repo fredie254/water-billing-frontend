@@ -121,6 +121,7 @@ export const Connections = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<Connection['status'] | ''>('');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
 
@@ -162,13 +163,15 @@ export const Connections = () => {
     fetchConnections();
   }, [page, search]);
 
-  const filtered = connections.filter(
-    (c) =>
+  const filtered = connections.filter((c) => {
+    const matchesSearch =
       search === '' ||
       c.customerName?.toLowerCase().includes(search.toLowerCase()) ||
       c.accountNumber.includes(search) ||
-      c.meterSerial?.includes(search)
-  );
+      c.meterSerial?.includes(search);
+    const matchesStatus = statusFilter === '' || c.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const columns: Column<Connection>[] = [
@@ -228,8 +231,18 @@ export const Connections = () => {
       </div>
 
       <div className="flex gap-3 flex-wrap">
+        <button
+          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${statusFilter === '' ? 'bg-primary-600 text-white' : 'badge-gray hover:bg-gray-200'}`}
+          onClick={() => { setStatusFilter(''); setPage(1); }}
+        >
+          All ({connections.length})
+        </button>
         {(['active', 'suspended', 'disconnected'] as const).map((s) => (
-          <button key={s} className="badge-gray px-3 py-1 cursor-pointer hover:bg-gray-200 capitalize text-xs">
+          <button
+            key={s}
+            className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors ${statusFilter === s ? 'bg-primary-600 text-white' : 'badge-gray hover:bg-gray-200'}`}
+            onClick={() => { setStatusFilter(s); setPage(1); }}
+          >
             {s} ({connections.filter((c) => c.status === s).length})
           </button>
         ))}
