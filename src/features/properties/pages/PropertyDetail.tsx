@@ -102,7 +102,7 @@ export const PropertyDetail = () => {
     setShowEdit(false);
   };
 
-  const connCfg = CONN_STATUS_CONFIG[property.connectionStatus];
+  const connCfg = CONN_STATUS_CONFIG[property.connectionStatus ?? 'not_connected'];
 
   return (
     <div className="space-y-6 max-w-5xl">

@@ -48,15 +48,26 @@ export const Properties = () => {
   const fetchProperties = () => {
     setLoading(true);
     propertiesApi
-      .list({ limit: 500 })
-      .then((r) => setProperties(r.data))
+      .list({ pageSize: 100 })
+      .then((r) => {
+        // Derive connectionStatus from connections array when the API omits the field
+        const normalized = r.data.map((p) => ({
+          ...p,
+          connectionStatus: p.connectionStatus ?? (
+            (p.connections?.length ?? 0) > 0
+              ? (p.connections!.some((c) => c.status === 'disconnected') ? 'disconnected' : 'connected')
+              : 'not_connected'
+          ) as PropertyConnectionStatus,
+        }));
+        setProperties(normalized);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     fetchProperties();
-    zonesApi.list({ limit: 200 }).then((r) => setZones(r.data)).catch(() => {});
+    zonesApi.list({ pageSize: 100 }).then((r) => setZones(r.data)).catch(() => {});
   }, []);
 
   const zoneOptions = useMemo(() => [...new Set(properties.map((p) => p.zoneId).filter(Boolean))].map((zid) => {
@@ -104,8 +115,9 @@ export const Properties = () => {
     }
   };
 
-  const ConnStatusBadge = ({ status }: { status: PropertyConnectionStatus }) => {
-    const cfg = CONN_STATUS_CONFIG[status];
+  const ConnStatusBadge = ({ status }: { status?: PropertyConnectionStatus }) => {
+    const cfg = CONN_STATUS_CONFIG[status ?? 'not_connected'];
+    if (!cfg) return <span className="text-xs text-gray-400">—</span>;
     return (
       <span className={cn('inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full', cfg.className)}>
         {cfg.icon} {cfg.label}

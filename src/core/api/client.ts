@@ -111,10 +111,12 @@ export function unwrapList<T>(raw: unknown): UnwrappedList<T> {
     []
   ) as T[];
 
-  // Find pagination wherever it lives
+  // Find pagination wherever it lives.
+  // Some APIs put it at root (body.pagination) alongside data; others nest it inside payload.
   const pg = (
     payload?.pagination ??
     payload?.meta       ??
+    body?.pagination    ??
     (Array.isArray(payload) ? {} : payload)
   ) as Record<string, unknown>;
 

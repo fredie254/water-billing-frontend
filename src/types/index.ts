@@ -388,7 +388,8 @@ export interface Property {
   latitude?: number;
   longitude?: number;
   // Status
-  connectionStatus: PropertyConnectionStatus;
+  connectionStatus?: PropertyConnectionStatus;
+  connections?: { status?: string }[];
   status: 'active' | 'inactive';
   notes?: string;
   createdAt: string;
