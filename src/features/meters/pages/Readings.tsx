@@ -122,23 +122,13 @@ const RecordReadingForm = ({
   const onSubmit = async (data: ReadingForm) => {
     setApiError('');
     try {
-      const v = validateReading(data.readingValue, prevReading);
       await readingsApi.create({
-        connectionId:    data.connectionId,
-        accountNumber:   conn?.accountNumber,
-        meterId:         conn?.meterId ?? '',
-        meterSerial:     conn?.meterSerial,
-        customerName:    conn?.customerName,
-        currentReading:  data.readingValue,   // backend field: current_reading
-        previousReading: prevReading,
-        unitsConsumed:   v.consumption,
-        readingDate:     data.readingDate,
-        readingType:     data.readingType,
-        notes:           data.notes,
-        flagged:         v.flagged,
-        flagReason:      v.flagReason,
-        flagNote:        v.flagNote,
-        validated:       !v.flagged,
+        connectionId:   data.connectionId,
+        meterId:        conn?.meterId ?? '',
+        currentReading: data.readingValue,
+        readingDate:    data.readingDate,
+        readingType:    data.readingType,
+        notes:          data.notes || undefined,
       });
       onSuccess();
     } catch (err) {
