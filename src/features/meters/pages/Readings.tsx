@@ -11,10 +11,11 @@ import { Badge } from '@/shared/components/ui/Badge';
 import { Modal } from '@/shared/components/ui/Modal';
 import { Input, Select, Textarea } from '@/shared/components/ui/Input';
 import { Button } from '@/shared/components/ui/Button';
-import { readingsApi } from '@/features/meters/api/meters';
+import { readingsApi, metersApi } from '@/features/meters/api/meters';
 import { connectionsApi } from '@/features/billing/api/billing';
+import { customersApi } from '@/features/customers/api/customers';
 import { formatDate, cn } from '@/shared/utils/utils';
-import type { MeterReading, ReadingFlag, Connection } from '@/types';
+import type { MeterReading, ReadingFlag, Connection, Customer, Meter } from '@/types';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -234,6 +235,8 @@ export const Readings = () => {
   const [total,       setTotal]       = useState(0);
   const [loading,     setLoading]     = useState(false);
   const [connections, setConnections] = useState<Connection[]>([]);
+  const [customerMap, setCustomerMap] = useState<Record<string, Customer>>({});
+  const [meterMap,    setMeterMap]    = useState<Record<string, Meter>>({});
   const [search,      setSearch]      = useState('');
   const [showFlagged, setShowFlagged] = useState(false);
   const [showPending, setShowPending] = useState(false);
@@ -272,10 +275,33 @@ export const Readings = () => {
     fetchReadings();
   }, [fetchReadings]);
 
-  // Fetch connections once for the record-reading form
+  // Fetch connections for the record-reading form, then resolve customers and meters
   useEffect(() => {
     connectionsApi.list({ pageSize: 100 })
-      .then((r) => setConnections(r.data))
+      .then(async (r) => {
+        setConnections(r.data);
+
+        const custIds  = [...new Set(r.data.map((c) => c.customerId).filter(Boolean))];
+        const meterIds = [...new Set(r.data.map((c) => c.meterId).filter(Boolean))];
+
+        const [custResults, meterResults] = await Promise.all([
+          Promise.allSettled(custIds.map((id) => customersApi.getOne(id))),
+          Promise.allSettled(meterIds.map((id) => metersApi.getOne(id))),
+        ]);
+
+        const cMap: Record<string, Customer> = {};
+        custResults.forEach((res, i) => {
+          if (res.status === 'fulfilled' && res.value) cMap[custIds[i]] = res.value;
+        });
+
+        const mMap: Record<string, Meter> = {};
+        meterResults.forEach((res, i) => {
+          if (res.status === 'fulfilled' && res.value) mMap[meterIds[i]] = res.value;
+        });
+
+        setCustomerMap(cMap);
+        setMeterMap(mMap);
+      })
       .catch((err) => console.error('Failed to fetch connections:', err));
   }, []);
 
@@ -328,9 +354,10 @@ export const Readings = () => {
     {
       key: 'accountNumber', header: 'Account',
       render: (r) => {
-        const conn = connMap[r.connectionId];
-        const acct = r.accountNumber ?? conn?.accountNumber ?? '—';
-        const name = r.customerName  ?? conn?.customerName  ?? '—';
+        const conn     = connMap[r.connectionId];
+        const customer = conn?.customerId ? customerMap[conn.customerId] : undefined;
+        const acct     = r.accountNumber ?? conn?.accountNumber ?? '—';
+        const name     = r.customerName  ?? customer?.name      ?? '—';
         return (
           <div className="flex flex-col gap-0.5">
             <span className="font-medium text-primary-600 text-xs font-mono">{acct}</span>
@@ -342,8 +369,16 @@ export const Readings = () => {
     {
       key: 'meterSerial', header: 'Meter',
       render: (r) => {
-        const serial = r.meterSerial ?? connMap[r.connectionId]?.meterSerial ?? '—';
-        return <span className="font-mono text-xs text-gray-700">{serial}</span>;
+        const conn   = connMap[r.connectionId];
+        const meter  = conn?.meterId ? meterMap[conn.meterId] : undefined;
+        const serial = r.meterSerial ?? meter?.serialNumber ?? '—';
+        const brand  = meter?.brand;
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className="font-mono text-xs text-gray-700">{serial}</span>
+            {brand && <span className="text-xs text-gray-400">{brand}</span>}
+          </div>
+        );
       },
     },
     {
