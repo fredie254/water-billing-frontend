@@ -309,7 +309,8 @@ export const Readings = () => {
       }
       return null;
     }
-    const cfg = FLAG_CONFIG[reading.flagReason];
+    const cfg = FLAG_CONFIG[reading.flagReason] ?? FLAG_CONFIG['none'];
+    if (!cfg) return null;
     return (
       <span className={cn('inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full', cfg.color)}>
         {cfg.icon} {cfg.label}
@@ -337,7 +338,7 @@ export const Readings = () => {
     },
     {
       key: 'readingValue', header: 'Current (m³)',
-      render: (r) => <span className="text-sm font-semibold text-gray-900">{r.readingValue.toFixed(1)}</span>,
+      render: (r) => <span className="text-sm font-semibold text-gray-900">{(r.readingValue ?? 0).toFixed(1)}</span>,
     },
     {
       key: 'unitsConsumed', header: 'Consumed',
@@ -356,7 +357,7 @@ export const Readings = () => {
     },
     {
       key: 'readingDate', header: 'Date',
-      render: (r) => <span className="text-sm text-gray-600">{formatDate(r.readingDate)}</span>,
+      render: (r) => <span className="text-sm text-gray-600">{r.readingDate ? formatDate(r.readingDate) : '—'}</span>,
     },
     {
       key: 'flagged', header: 'Status',
@@ -505,7 +506,7 @@ export const Readings = () => {
             <div className="grid grid-cols-3 gap-3 text-sm">
               {[
                 { label: 'Previous',   value: `${resolving.previousReading?.toFixed(1) ?? '—'} m³` },
-                { label: 'Current',    value: `${resolving.readingValue.toFixed(1)} m³` },
+                { label: 'Current',    value: `${(resolving.readingValue ?? 0).toFixed(1)} m³` },
                 { label: 'Consumed',   value: `${(resolving.unitsConsumed ?? 0).toFixed(1)} m³` },
               ].map((row) => (
                 <div key={row.label} className="card p-3 text-center">
