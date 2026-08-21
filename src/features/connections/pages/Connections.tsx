@@ -41,9 +41,9 @@ const ConnectionFormComponent = ({ onSuccess, onCancel }: ConnectionFormProps) =
   const [tariffs, setTariffs] = useState<Tariff[]>([]);
 
   useEffect(() => {
-    customersApi.list({ limit: 200 }).then((r) => setCustomers(r.data)).catch(() => {});
-    metersApi.list({ limit: 200 }).then((r) => setMeters(r.data)).catch(() => {});
-    tariffsApi.list({ limit: 100 }).then((r) => setTariffs(r.data)).catch(() => {});
+    customersApi.list({ pageSize: 100 }).then((r) => setCustomers(r.data)).catch(() => {});
+    metersApi.list({ pageSize: 100 }).then((r) => setMeters(r.data)).catch(() => {});
+    tariffsApi.list({ pageSize: 100 }).then((r) => setTariffs(r.data)).catch(() => {});
   }, []);
 
   const tariffId = watch('tariffId');
@@ -125,7 +125,7 @@ export const Connections = () => {
   const fetchConnections = () => {
     setLoading(true);
     connectionsApi
-      .list({ page, limit: PAGE_SIZE, search: search || undefined })
+      .list({ page, pageSize: PAGE_SIZE, search: search || undefined })
       .then((r) => setConnections(r.data))
       .catch(() => {})
       .finally(() => setLoading(false));

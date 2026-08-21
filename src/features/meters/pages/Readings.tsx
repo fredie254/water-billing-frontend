@@ -318,19 +318,33 @@ export const Readings = () => {
     );
   };
 
+  // Build a lookup map so reading rows can show account/meter info from connections
+  const connMap = useMemo(
+    () => Object.fromEntries(connections.map((c) => [c.id, c])),
+    [connections],
+  );
+
   const columns: Column<MeterReading>[] = [
     {
       key: 'accountNumber', header: 'Account',
-      render: (r) => (
-        <div className="flex flex-col gap-0.5">
-          <span className="font-medium text-primary-600 text-xs font-mono">{r.accountNumber}</span>
-          <span className="text-xs text-gray-500">{r.customerName}</span>
-        </div>
-      ),
+      render: (r) => {
+        const conn = connMap[r.connectionId];
+        const acct = r.accountNumber ?? conn?.accountNumber ?? '—';
+        const name = r.customerName  ?? conn?.customerName  ?? '—';
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className="font-medium text-primary-600 text-xs font-mono">{acct}</span>
+            <span className="text-xs text-gray-500">{name}</span>
+          </div>
+        );
+      },
     },
     {
       key: 'meterSerial', header: 'Meter',
-      render: (r) => <span className="font-mono text-xs text-gray-700">{r.meterSerial ?? '—'}</span>,
+      render: (r) => {
+        const serial = r.meterSerial ?? connMap[r.connectionId]?.meterSerial ?? '—';
+        return <span className="font-mono text-xs text-gray-700">{serial}</span>;
+      },
     },
     {
       key: 'previousReading', header: 'Previous (m³)',
