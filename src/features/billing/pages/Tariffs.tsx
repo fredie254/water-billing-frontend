@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { Input, Select, Textarea } from '@/shared/components/ui/Input';
 import { Button } from '@/shared/components/ui/Button';
 import { tariffsApi } from '@/features/billing/api/billing';
+import { extractError } from '@/core/api/client';
 
 const tariffSchema = z.object({
   name: z.string().min(2, 'Name required'),
@@ -37,6 +38,7 @@ const TariffFormComponent = ({
   defaultValues?: Partial<TariffForm>;
   editingId?: string;
 }) => {
+  const [apiError, setApiError] = useState('');
   const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<TariffForm>({
     resolver: zodResolver(tariffSchema),
     defaultValues: {
@@ -49,6 +51,7 @@ const TariffFormComponent = ({
   const { fields, append, remove } = useFieldArray({ control, name: 'blocks' });
 
   const onSubmit = async (data: TariffForm) => {
+    setApiError('');
     try {
       if (editingId) {
         await tariffsApi.update(editingId, data);
@@ -57,7 +60,7 @@ const TariffFormComponent = ({
       }
       onSuccess();
     } catch (err) {
-      console.error('Failed to save tariff', err);
+      setApiError(extractError(err));
     }
   };
 
@@ -112,6 +115,9 @@ const TariffFormComponent = ({
         </div>
       </div>
 
+      {apiError && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{apiError}</div>
+      )}
       <div className="flex justify-end gap-3 pt-2">
         <Button variant="secondary" type="button" onClick={onCancel}>Cancel</Button>
         <Button type="submit" loading={isSubmitting}>Save Tariff</Button>

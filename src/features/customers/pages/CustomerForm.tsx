@@ -1,9 +1,11 @@
-﻿import { useForm } from 'react-hook-form';
+﻿import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Input, Select, Textarea } from '@/shared/components/ui/Input';
 import { Button } from '@/shared/components/ui/Button';
 import { customersApi } from '@/features/customers/api/customers';
+import { extractError } from '@/core/api/client';
 import type { Customer } from '@/types';
 
 const CUSTOMER_TYPES = [
@@ -43,6 +45,7 @@ interface Props {
 }
 
 export const CustomerForm = ({ customer, onSuccess, onCancel }: Props) => {
+  const [apiError, setApiError] = useState('');
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -61,6 +64,7 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: Props) => {
   const isBusiness = ['commercial', 'industrial', 'institutional', 'government', 'bulk'].includes(customerType);
 
   const onSubmit = async (data: FormData) => {
+    setApiError('');
     try {
       const payload: Partial<Customer> = {
         name:         data.name,
@@ -81,7 +85,7 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: Props) => {
       }
       onSuccess(saved);
     } catch (err) {
-      console.error('Failed to save customer:', err);
+      setApiError(extractError(err));
     }
   };
 
@@ -154,6 +158,9 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: Props) => {
         placeholder="Any internal notes about this customer…"
       />
 
+      {apiError && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{apiError}</div>
+      )}
       <div className="flex justify-end gap-3 pt-2">
         <Button variant="secondary" type="button" onClick={onCancel}>Cancel</Button>
         <Button type="submit" loading={isSubmitting}>

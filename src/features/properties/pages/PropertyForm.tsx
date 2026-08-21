@@ -7,6 +7,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { propertiesApi } from '@/features/properties/api/properties';
 import { customersApi } from '@/features/customers/api/customers';
 import { zonesApi } from '@/features/zones/api/zones';
+import { extractError } from '@/core/api/client';
 import type { Property, Customer, Zone } from '@/types';
 
 const PROPERTY_TYPES = [
@@ -41,6 +42,7 @@ interface Props {
 export const PropertyForm = ({ property, onSuccess, onCancel }: Props) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [zones, setZones]         = useState<Zone[]>([]);
+  const [apiError, setApiError]   = useState('');
 
   useEffect(() => {
     customersApi.list({ limit: 200 }).then((r) => setCustomers(r.data)).catch(() => {});
@@ -72,17 +74,22 @@ export const PropertyForm = ({ property, onSuccess, onCancel }: Props) => {
   const zoneOptions     = [{ value: '', label: 'No zone assigned' }, ...zones.map((z) => ({ value: z.id, label: z.name }))];
 
   const onSubmit = async (data: FormData) => {
-    const payload: Partial<Property> = {
-      ...data,
-      latitude:  data.latitude  ? parseFloat(data.latitude)  : undefined,
-      longitude: data.longitude ? parseFloat(data.longitude) : undefined,
-    };
-    if (property) {
-      await propertiesApi.update(property.id, payload);
-    } else {
-      await propertiesApi.create(payload);
+    setApiError('');
+    try {
+      const payload: Partial<Property> = {
+        ...data,
+        latitude:  data.latitude  ? parseFloat(data.latitude)  : undefined,
+        longitude: data.longitude ? parseFloat(data.longitude) : undefined,
+      };
+      if (property) {
+        await propertiesApi.update(property.id, payload);
+      } else {
+        await propertiesApi.create(payload);
+      }
+      onSuccess(data);
+    } catch (err) {
+      setApiError(extractError(err));
     }
-    onSuccess(data);
   };
 
   return (
@@ -183,6 +190,9 @@ export const PropertyForm = ({ property, onSuccess, onCancel }: Props) => {
         placeholder="Any internal notes about this property…"
       />
 
+      {apiError && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{apiError}</div>
+      )}
       <div className="flex justify-end gap-3 pt-2">
         <Button variant="secondary" type="button" onClick={onCancel}>Cancel</Button>
         <Button type="submit" loading={isSubmitting}>

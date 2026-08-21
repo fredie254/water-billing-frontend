@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { usersApi } from '@/features/users/api/users';
+import { extractError } from '@/core/api/client';
 import { Modal, ConfirmDialog } from '@/shared/components/ui/Modal';
 import { Input, Select } from '@/shared/components/ui/Input';
 import type { User, UserRole, Permission, LoginHistory, QueryParams } from '@/types';
@@ -266,6 +267,7 @@ export const Users = () => {
   const [resetUser, setResetUser]         = useState<User | null>(null);
   const [tempPassword, setTempPassword]   = useState('');
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const inviteForm = useForm<InviteForm>({ resolver: zodResolver(inviteSchema) });
   const editForm   = useForm<EditForm>({ resolver: zodResolver(editSchema) });
@@ -357,6 +359,7 @@ export const Users = () => {
   };
 
   const handleInvite = async (data: InviteForm) => {
+    setFormError('');
     setSaving(true);
     try {
       const newUser = await usersApi.create({
@@ -364,13 +367,13 @@ export const Users = () => {
         email: data.email,
         phone: data.phone,
         role: data.role,
-        password: Math.random().toString(36).slice(-10), // temporary password; backend should send invite email
+        password: Math.random().toString(36).slice(-10),
       } as any);
       setUsers(prev => [newUser, ...prev]);
       setInviteSent(true);
       setTimeout(() => { setInviteSent(false); setShowInvite(false); inviteForm.reset(); }, 1800);
-    } catch {
-      // handle silently; form stays open
+    } catch (err) {
+      setFormError(extractError(err));
     } finally {
       setSaving(false);
     }
@@ -378,9 +381,9 @@ export const Users = () => {
 
   const handleEdit = async (data: EditForm) => {
     if (!editUser) return;
+    setFormError('');
     setSaving(true);
     try {
-      // Use dedicated role endpoint if role changed (it carries audit trail)
       if (data.role !== editUser.role) {
         await usersApi.updateRole(editUser.id, data.role, 'Role updated via admin panel');
       }
@@ -392,8 +395,8 @@ export const Users = () => {
       });
       setUsers(prev => prev.map(u => u.id === editUser.id ? updated : u));
       setEditUser(null);
-    } catch {
-      // handle silently
+    } catch (err) {
+      setFormError(extractError(err));
     } finally {
       setSaving(false);
     }
@@ -411,7 +414,7 @@ export const Users = () => {
         setUsers(prev => prev.map(u => u.id === toggleUser.id ? { ...u, status: 'active' as const } : u));
       }
     } catch {
-      // handle silently
+      // activate/deactivate errors are non-critical; dialog closes regardless
     } finally {
       setSaving(false);
       setToggleUser(null);
@@ -421,13 +424,15 @@ export const Users = () => {
 
   const handleResetPassword = async () => {
     if (!resetUser) return;
+    setFormError('');
     setSaving(true);
     try {
       const res = await usersApi.resetPassword(resetUser.id) as unknown as Record<string, unknown>;
       const pw = (res as any)?.temporaryPassword ?? (res as any)?.temporary_password ?? (res as any)?.data?.temporaryPassword ?? '';
       setTempPassword(String(pw));
-    } catch {
-      // handle silently
+    } catch (err) {
+      setFormError(extractError(err));
+      setResetUser(null);
     } finally {
       setSaving(false);
     }
@@ -440,7 +445,7 @@ export const Users = () => {
       await usersApi.delete(deleteUser.id);
       setUsers(prev => prev.filter(u => u.id !== deleteUser.id));
     } catch {
-      // handle silently
+      // delete errors are shown by the ConfirmDialog staying open
     } finally {
       setSaving(false);
       setDeleteUser(null);
@@ -736,11 +741,15 @@ export const Users = () => {
       {/* Invite Modal */}
       <Modal
         open={showInvite}
-        onClose={() => { setShowInvite(false); setInviteSent(false); inviteForm.reset(); }}
+        onClose={() => { setShowInvite(false); setInviteSent(false); setFormError(''); inviteForm.reset(); }}
         title="Invite User"
         description="Send an invitation to a new system user"
         footer={inviteSent ? undefined : (
-          <div className="flex justify-end gap-3">
+          <div className="space-y-3">
+            {formError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{formError}</div>
+            )}
+            <div className="flex justify-end gap-3">
             <button className="btn-secondary" onClick={() => { setShowInvite(false); inviteForm.reset(); }}>
               Cancel
             </button>
@@ -750,6 +759,7 @@ export const Users = () => {
                 : 'Send Invitation'
               }
             </button>
+            </div>
           </div>
         )}
       >
@@ -795,11 +805,15 @@ export const Users = () => {
       {/* Edit Modal */}
       <Modal
         open={!!editUser}
-        onClose={() => setEditUser(null)}
+        onClose={() => { setEditUser(null); setFormError(''); }}
         title="Edit User"
         description={editUser ? `Editing ${editUser.name}` : ''}
         footer={
-          <div className="flex justify-end gap-3">
+          <div className="space-y-3">
+            {formError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{formError}</div>
+            )}
+            <div className="flex justify-end gap-3">
             <button className="btn-secondary" onClick={() => setEditUser(null)}>Cancel</button>
             <button className="btn-primary" onClick={editForm.handleSubmit(handleEdit)} disabled={saving}>
               {saving
@@ -807,6 +821,7 @@ export const Users = () => {
                 : 'Save Changes'
               }
             </button>
+            </div>
           </div>
         }
       >

@@ -3,6 +3,7 @@ import { Zap } from 'lucide-react';
 import { DataTable, type Column } from '@/shared/components/data-display/DataTable';
 import { Badge } from '@/shared/components/ui/Badge';
 import { Modal } from '@/shared/components/ui/Modal';
+import { extractError } from '@/core/api/client';
 import { connectionsApi } from '@/features/billing/api/billing';
 import { customersApi } from '@/features/customers/api/customers';
 import { metersApi } from '@/features/meters/api/meters';
@@ -39,6 +40,7 @@ const ConnectionFormComponent = ({ onSuccess, onCancel }: ConnectionFormProps) =
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [meters, setMeters] = useState<Meter[]>([]);
   const [tariffs, setTariffs] = useState<Tariff[]>([]);
+  const [apiError, setApiError] = useState('');
 
   useEffect(() => {
     customersApi.list({ pageSize: 100 }).then((r) => setCustomers(r.data)).catch(() => {});
@@ -50,8 +52,13 @@ const ConnectionFormComponent = ({ onSuccess, onCancel }: ConnectionFormProps) =
   const tariff = tariffs.find((t) => t.id === tariffId);
 
   const onSubmit = async (data: ConnForm) => {
-    await connectionsApi.create(data as Partial<Connection>);
-    onSuccess();
+    setApiError('');
+    try {
+      await connectionsApi.create(data as Partial<Connection>);
+      onSuccess();
+    } catch (err) {
+      setApiError(extractError(err));
+    }
   };
 
   return (
@@ -105,6 +112,9 @@ const ConnectionFormComponent = ({ onSuccess, onCancel }: ConnectionFormProps) =
         <div className="p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
           Standing charge: <strong>{formatCurrency(tariff.standingCharge)}/mo</strong> · Min charge: <strong>{formatCurrency(tariff.minimumCharge)}</strong>
         </div>
+      )}
+      {apiError && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{apiError}</div>
       )}
       <div className="flex justify-end gap-3 pt-2">
         <Button variant="secondary" type="button" onClick={onCancel}>Cancel</Button>

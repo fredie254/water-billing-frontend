@@ -14,6 +14,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { readingsApi, metersApi } from '@/features/meters/api/meters';
 import { connectionsApi } from '@/features/billing/api/billing';
 import { customersApi } from '@/features/customers/api/customers';
+import { extractError } from '@/core/api/client';
 import { formatDate, cn } from '@/shared/utils/utils';
 import type { MeterReading, ReadingFlag, Connection, Customer, Meter } from '@/types';
 
@@ -92,6 +93,7 @@ const RecordReadingForm = ({
   onSuccess: () => void;
   onCancel: () => void;
 }) => {
+  const [apiError, setApiError] = useState('');
   const {
     register, handleSubmit, watch, formState: { errors, isSubmitting },
   } = useForm<ReadingForm>({
@@ -118,25 +120,30 @@ const RecordReadingForm = ({
   );
 
   const onSubmit = async (data: ReadingForm) => {
-    const v = validateReading(data.readingValue, prevReading);
-    await readingsApi.create({
-      connectionId:    data.connectionId,
-      accountNumber:   conn?.accountNumber,
-      meterId:         conn?.meterId ?? '',
-      meterSerial:     conn?.meterSerial,
-      customerName:    conn?.customerName,
-      readingValue:    data.readingValue,
-      previousReading: prevReading,
-      unitsConsumed:   v.consumption,
-      readingDate:     data.readingDate,
-      readingType:     data.readingType,
-      notes:           data.notes,
-      flagged:         v.flagged,
-      flagReason:      v.flagReason,
-      flagNote:        v.flagNote,
-      validated:       !v.flagged,
-    });
-    onSuccess();
+    setApiError('');
+    try {
+      const v = validateReading(data.readingValue, prevReading);
+      await readingsApi.create({
+        connectionId:    data.connectionId,
+        accountNumber:   conn?.accountNumber,
+        meterId:         conn?.meterId ?? '',
+        meterSerial:     conn?.meterSerial,
+        customerName:    conn?.customerName,
+        readingValue:    data.readingValue,
+        previousReading: prevReading,
+        unitsConsumed:   v.consumption,
+        readingDate:     data.readingDate,
+        readingType:     data.readingType,
+        notes:           data.notes,
+        flagged:         v.flagged,
+        flagReason:      v.flagReason,
+        flagNote:        v.flagNote,
+        validated:       !v.flagged,
+      });
+      onSuccess();
+    } catch (err) {
+      setApiError(extractError(err));
+    }
   };
 
   return (
@@ -223,6 +230,9 @@ const RecordReadingForm = ({
         <span>Attach meter photo (mobile field app)</span>
       </div>
 
+      {apiError && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{apiError}</div>
+      )}
       <div className="flex justify-end gap-3 pt-2">
         <Button variant="secondary" type="button" onClick={onCancel}>Cancel</Button>
         <Button type="submit" loading={isSubmitting}>Save Reading</Button>
