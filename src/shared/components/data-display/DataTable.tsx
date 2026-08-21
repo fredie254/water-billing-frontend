@@ -55,6 +55,7 @@ export const DataTable = <T,>({
         <table className="table">
           <thead>
             <tr>
+              <th className="w-10 text-center text-gray-400">#</th>
               {columns.map((col) => (
                 <th key={col.key} className={col.className}>{col.header}</th>
               ))}
@@ -64,6 +65,7 @@ export const DataTable = <T,>({
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i}>
+                  <td><div className="h-4 bg-gray-100 rounded animate-pulse w-6 mx-auto" /></td>
                   {columns.map((col) => (
                     <td key={col.key}>
                       <div className="h-4 bg-gray-100 rounded animate-pulse" style={{ width: `${60 + Math.random() * 30}%` }} />
@@ -73,28 +75,34 @@ export const DataTable = <T,>({
               ))
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="py-16 text-center text-gray-400 text-sm">
+                <td colSpan={columns.length + 1} className="py-16 text-center text-gray-400 text-sm">
                   {emptyMessage}
                 </td>
               </tr>
             ) : (
-              data.map((row, idx) => (
-                <tr
-                  key={rowKey(row)}
-                  onClick={() => onRowClick?.(row)}
-                  className={cn(
-                    idx % 2 === 0 ? 'bg-white' : 'bg-blue-50',
-                    'hover:bg-blue-100 transition-colors duration-100',
-                    onRowClick && 'cursor-pointer',
-                  )}
-                >
-                  {columns.map((col) => (
-                    <td key={col.key} className={col.className}>
-                      {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '—')}
-                    </td>
-                  ))}
-                </tr>
-              ))
+              data.map((row, idx) => {
+                const sn = pagination
+                  ? (pagination.page - 1) * pagination.pageSize + idx + 1
+                  : idx + 1;
+                return (
+                  <tr
+                    key={rowKey(row)}
+                    onClick={() => onRowClick?.(row)}
+                    className={cn(
+                      idx % 2 === 0 ? 'bg-white' : 'bg-blue-50',
+                      'hover:bg-blue-100 transition-colors duration-100',
+                      onRowClick && 'cursor-pointer',
+                    )}
+                  >
+                    <td className="text-center text-xs text-gray-400 font-mono w-10">{sn}</td>
+                    {columns.map((col) => (
+                      <td key={col.key} className={col.className}>
+                        {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '—')}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
