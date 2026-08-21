@@ -363,18 +363,20 @@ export const Readings = () => {
 
   const columns: Column<MeterReading>[] = [
     {
-      key: 'accountNumber', header: 'Account',
+      key: 'accountNumber', header: 'Account #',
+      render: (r) => {
+        const conn = connMap[r.connectionId];
+        const acct = r.accountNumber ?? conn?.accountNumber ?? '—';
+        return <span className="font-medium text-primary-600 text-xs font-mono">{acct}</span>;
+      },
+    },
+    {
+      key: 'customerName', header: 'Customer',
       render: (r) => {
         const conn     = connMap[r.connectionId];
         const customer = conn?.customerId ? customerMap[conn.customerId] : undefined;
-        const acct     = r.accountNumber ?? conn?.accountNumber ?? '—';
-        const name     = r.customerName  ?? customer?.name      ?? '—';
-        return (
-          <div className="flex flex-col gap-0.5">
-            <span className="font-medium text-primary-600 text-xs font-mono">{acct}</span>
-            <span className="text-xs text-gray-500">{name}</span>
-          </div>
-        );
+        const name     = r.customerName ?? conn?.customerName ?? customer?.name ?? '—';
+        return <span className="text-sm text-gray-800">{name}</span>;
       },
     },
     {
