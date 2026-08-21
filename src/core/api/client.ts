@@ -59,9 +59,14 @@ apiClient.interceptors.response.use(
     return res;
   },
   (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      useAuthStore.getState().logout();
-      window.location.href = '/login';
+    const status = error.response?.status;
+    if (status === 401 || status === 403) {
+      const msg = (error.response?.data as Record<string, unknown>)?.message as string | undefined;
+      // Only auto-logout on genuine auth failures, not business-logic 403s
+      if (!msg || /not authenticated|unauthorized|invalid token|token expired/i.test(msg)) {
+        useAuthStore.getState().logout();
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   },

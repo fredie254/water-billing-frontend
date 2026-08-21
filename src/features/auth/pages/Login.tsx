@@ -64,8 +64,13 @@ export const Login = () => {
     try {
       setError('');
       const res = await authApi.login(data.email, data.password);
-      const user = { ...res.user, role: normalizeRole(res.user.role) };
-      setAuth(user, res.accessToken, res.refreshToken);
+      const token = res?.accessToken;
+      if (!token) {
+        setError('Login succeeded but no access token was returned. Check backend response.');
+        return;
+      }
+      const user = { ...(res.user ?? {}), role: normalizeRole(res.user?.role ?? '') };
+      setAuth(user as Parameters<typeof setAuth>[0], token, res.refreshToken ?? '');
       navigate(user.role === 'customer' ? '/portal' : '/');
     } catch (err) {
       setError(extractError(err));
