@@ -4,10 +4,11 @@ import type { Customer, QueryParams } from '@/types';
 const BASE = '/customers';
 
 function normalizeCustomer(raw: Record<string, unknown>): Customer {
+  // Temporary: log first item to reveal actual field names from API
+  if (raw.id) console.debug('[customer raw]', JSON.stringify(raw));
   return {
     id:                 raw.id as string,
     tenantId:           (raw.tenantId ?? '') as string,
-    // API returns customer_number → camelCase: customerNumber; type uses customerNo
     customerNo:         (raw.customerNumber ?? raw.customerNo ?? '') as string,
     name:               (raw.name ?? '') as string,
     companyName:        raw.companyName as string | undefined,
