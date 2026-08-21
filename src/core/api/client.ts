@@ -84,6 +84,50 @@ apiClient.interceptors.response.use(
   },
 );
 
+// ── List response unwrapper ───────────────────────────────────────────────────
+// The API may return any of these shapes (after camelCase conversion):
+//   { success, data: [ ...items ] }
+//   { success, data: { data:[...], pagination:{total,page,pageSize} } }
+//   { success, data: { items:[...], total, page, pageSize } }
+//   { data:[...], pagination:{...} }  (PaginatedResponse directly)
+
+export interface UnwrappedList<T> {
+  data: T[];
+  pagination: { total: number; page: number; pageSize: number };
+}
+
+export function unwrapList<T>(raw: unknown): UnwrappedList<T> {
+  const body = raw as Record<string, unknown>;
+
+  // Strip the outer { success, data, message } envelope when present
+  const payload = (body?.success !== undefined ? body.data : body) as Record<string, unknown>;
+
+  // Find the items array
+  const items = (
+    Array.isArray(payload)            ? payload           :
+    Array.isArray(payload?.data)      ? payload.data      :
+    Array.isArray(payload?.items)     ? payload.items     :
+    Array.isArray(payload?.results)   ? payload.results   :
+    []
+  ) as T[];
+
+  // Find pagination wherever it lives
+  const pg = (
+    payload?.pagination ??
+    payload?.meta       ??
+    (Array.isArray(payload) ? {} : payload)
+  ) as Record<string, unknown>;
+
+  return {
+    data: items,
+    pagination: {
+      total:    Number(pg?.total    ?? pg?.totalItems ?? pg?.count ?? items.length),
+      page:     Number(pg?.page     ?? pg?.currentPage ?? 1),
+      pageSize: Number(pg?.pageSize ?? pg?.perPage ?? pg?.limit ?? (items.length || 10)),
+    },
+  };
+}
+
 // ── Error helper ──────────────────────────────────────────────────────────────
 
 export const extractError = (error: unknown): string => {

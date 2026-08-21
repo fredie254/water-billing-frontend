@@ -1,9 +1,9 @@
-﻿import { apiClient } from '@/core/api/client';
-import type { DisconnectionOrder, PaginatedResponse, QueryParams } from '@/types';
+﻿import { apiClient, unwrapList } from '@/core/api/client';
+import type { DisconnectionOrder, QueryParams } from '@/types';
 
 export const disconnectionsApi = {
   list: (params?: QueryParams) =>
-    apiClient.get<PaginatedResponse<DisconnectionOrder>>('/disconnections', { params }).then((r) => r.data),
+    apiClient.get('/disconnections', { params }).then((r) => unwrapList<DisconnectionOrder>(r.data)),
 
   getOne: (id: string) =>
     apiClient.get<{ data: DisconnectionOrder }>(`/disconnections/${id}`).then((r) => r.data.data),

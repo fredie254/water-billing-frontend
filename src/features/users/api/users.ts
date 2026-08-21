@@ -1,9 +1,9 @@
-import { apiClient } from '@/core/api/client';
-import type { User, PaginatedResponse, QueryParams } from '@/types';
+import { apiClient, unwrapList } from '@/core/api/client';
+import type { User, QueryParams } from '@/types';
 
 export const usersApi = {
   list: (params?: QueryParams) =>
-    apiClient.get<PaginatedResponse<User>>('/users', { params }).then((r) => r.data),
+    apiClient.get('/users', { params }).then((r) => unwrapList<User>(r.data)),
 
   getOne: (id: string) =>
     apiClient.get<{ data: User }>(`/users/${id}`).then((r) => r.data.data),

@@ -1,9 +1,9 @@
-import { apiClient } from '@/core/api/client';
-import type { Bill, Connection, Tariff, PaginatedResponse, QueryParams } from '@/types';
+import { apiClient, unwrapList } from '@/core/api/client';
+import type { Bill, Connection, Tariff, QueryParams } from '@/types';
 
 export const billsApi = {
   list: (params?: QueryParams) =>
-    apiClient.get<PaginatedResponse<Bill>>('/invoices', { params }).then((r) => r.data),
+    apiClient.get('/invoices', { params }).then((r) => unwrapList<Bill>(r.data)),
 
   getOne: (id: string) =>
     apiClient.get<{ data: Bill }>(`/invoices/${id}`).then((r) => r.data.data),
@@ -39,7 +39,7 @@ export const billsApi = {
 
 export const connectionsApi = {
   list: (params?: QueryParams) =>
-    apiClient.get<PaginatedResponse<Connection>>('/connections', { params }).then((r) => r.data),
+    apiClient.get('/connections', { params }).then((r) => unwrapList<Connection>(r.data)),
 
   getOne: (id: string) =>
     apiClient.get<{ data: Connection }>(`/connections/${id}`).then((r) => r.data.data),
@@ -60,7 +60,7 @@ export const connectionsApi = {
 
 export const tariffsApi = {
   list: (params?: QueryParams) =>
-    apiClient.get<PaginatedResponse<Tariff>>('/tariffs', { params }).then((r) => r.data),
+    apiClient.get('/tariffs', { params }).then((r) => unwrapList<Tariff>(r.data)),
 
   getOne: (id: string) =>
     apiClient.get<{ data: Tariff }>(`/tariffs/${id}`).then((r) => r.data.data),

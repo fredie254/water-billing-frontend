@@ -1,9 +1,9 @@
-﻿import { apiClient } from '@/core/api/client';
-import type { Payment, PaginatedResponse, QueryParams } from '@/types';
+﻿import { apiClient, unwrapList } from '@/core/api/client';
+import type { Payment, QueryParams } from '@/types';
 
 export const paymentsApi = {
   list: (params?: QueryParams) =>
-    apiClient.get<PaginatedResponse<Payment>>('/payments', { params }).then((r) => r.data),
+    apiClient.get('/payments', { params }).then((r) => unwrapList<Payment>(r.data)),
 
   getOne: (id: string) =>
     apiClient.get<{ data: Payment }>(`/payments/${id}`).then((r) => r.data.data),

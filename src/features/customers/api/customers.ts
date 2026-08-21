@@ -1,11 +1,11 @@
-﻿import { apiClient } from '@/core/api/client';
-import type { Customer, PaginatedResponse, QueryParams } from '@/types';
+﻿import { apiClient, unwrapList } from '@/core/api/client';
+import type { Customer, QueryParams } from '@/types';
 
 const BASE = '/customers';
 
 export const customersApi = {
   list: (params?: QueryParams) =>
-    apiClient.get<PaginatedResponse<Customer>>(BASE, { params }).then((r) => r.data),
+    apiClient.get(BASE, { params }).then((r) => unwrapList<Customer>(r.data)),
 
   getOne: (id: string) =>
     apiClient.get<{ data: Customer }>(`${BASE}/${id}`).then((r) => r.data.data),

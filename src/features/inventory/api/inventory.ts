@@ -1,9 +1,9 @@
-﻿import { apiClient } from '@/core/api/client';
-import type { InventoryItem, Asset, MaintenanceRecord, PaginatedResponse, QueryParams } from '@/types';
+﻿import { apiClient, unwrapList } from '@/core/api/client';
+import type { InventoryItem, Asset, MaintenanceRecord, QueryParams } from '@/types';
 
 export const inventoryApi = {
   list: (params?: QueryParams) =>
-    apiClient.get<PaginatedResponse<InventoryItem>>('/inventory', { params }).then((r) => r.data),
+    apiClient.get('/inventory', { params }).then((r) => unwrapList<InventoryItem>(r.data)),
 
   getOne: (id: string) =>
     apiClient.get<{ data: InventoryItem }>(`/inventory/${id}`).then((r) => r.data.data),
@@ -20,7 +20,7 @@ export const inventoryApi = {
 
 export const assetsApi = {
   list: (params?: QueryParams) =>
-    apiClient.get<PaginatedResponse<Asset>>('/assets', { params }).then((r) => r.data),
+    apiClient.get('/assets', { params }).then((r) => unwrapList<Asset>(r.data)),
 
   getOne: (id: string) =>
     apiClient.get<{ data: Asset }>(`/assets/${id}`).then((r) => r.data.data),
@@ -34,7 +34,7 @@ export const assetsApi = {
 
 export const maintenanceApi = {
   list: (params?: QueryParams) =>
-    apiClient.get<PaginatedResponse<MaintenanceRecord>>('/maintenance-records', { params }).then((r) => r.data),
+    apiClient.get('/maintenance-records', { params }).then((r) => unwrapList<MaintenanceRecord>(r.data)),
 
   getOne: (id: string) =>
     apiClient.get<{ data: MaintenanceRecord }>(`/maintenance-records/${id}`).then((r) => r.data.data),

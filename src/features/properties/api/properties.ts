@@ -1,20 +1,28 @@
-﻿import { apiClient } from '@/core/api/client';
-import type { Property, PaginatedResponse, QueryParams } from '@/types';
+import { apiClient, unwrapList } from '@/core/api/client';
+import type { Property, QueryParams } from '@/types';
 
 export const propertiesApi = {
   list: (params?: QueryParams) =>
-    apiClient.get<PaginatedResponse<Property>>('/properties', { params }).then((r) => r.data),
+    apiClient.get('/properties', { params }).then((r) => unwrapList<Property>(r.data)),
 
   getOne: (id: string) =>
-    apiClient.get<{ data: Property }>(`/properties/${id}`).then((r) => r.data.data),
+    apiClient.get(`/properties/${id}`).then((r) => {
+      const b = r.data as Record<string, unknown>;
+      return (b?.data ?? b) as Property;
+    }),
 
   create: (data: Partial<Property>) =>
-    apiClient.post<{ data: Property }>('/properties', data).then((r) => r.data.data),
+    apiClient.post('/properties', data).then((r) => {
+      const b = r.data as Record<string, unknown>;
+      return (b?.data ?? b) as Property;
+    }),
 
   update: (id: string, data: Partial<Property>) =>
-    apiClient.put<{ data: Property }>(`/properties/${id}`, data).then((r) => r.data.data),
+    apiClient.put(`/properties/${id}`, data).then((r) => {
+      const b = r.data as Record<string, unknown>;
+      return (b?.data ?? b) as Property;
+    }),
 
   activate: (id: string) => apiClient.post(`/properties/${id}/activate`),
-
   deactivate: (id: string) => apiClient.post(`/properties/${id}/deactivate`),
 };

@@ -1,18 +1,27 @@
-import { apiClient } from '@/core/api/client';
-import type { Meter, MeterReading, PaginatedResponse, QueryParams } from '@/types';
+import { apiClient, unwrapList } from '@/core/api/client';
+import type { Meter, MeterReading, QueryParams } from '@/types';
 
 export const metersApi = {
   list: (params?: QueryParams) =>
-    apiClient.get<PaginatedResponse<Meter>>('/meters', { params }).then((r) => r.data),
+    apiClient.get('/meters', { params }).then((r) => unwrapList<Meter>(r.data)),
 
   getOne: (id: string) =>
-    apiClient.get<{ data: Meter }>(`/meters/${id}`).then((r) => r.data.data),
+    apiClient.get(`/meters/${id}`).then((r) => {
+      const b = r.data as Record<string, unknown>;
+      return (b?.data ?? b) as Meter;
+    }),
 
   create: (data: Partial<Meter>) =>
-    apiClient.post<{ data: Meter }>('/meters', data).then((r) => r.data.data),
+    apiClient.post('/meters', data).then((r) => {
+      const b = r.data as Record<string, unknown>;
+      return (b?.data ?? b) as Meter;
+    }),
 
   update: (id: string, data: Partial<Meter>) =>
-    apiClient.put<{ data: Meter }>(`/meters/${id}`, data).then((r) => r.data.data),
+    apiClient.put(`/meters/${id}`, data).then((r) => {
+      const b = r.data as Record<string, unknown>;
+      return (b?.data ?? b) as Meter;
+    }),
 
   retire: (id: string, data?: { reason?: string; replacedById?: string }) =>
     apiClient.post(`/meters/${id}/retire`, data ?? {}),
@@ -26,13 +35,19 @@ export const metersApi = {
 
 export const readingsApi = {
   list: (params?: QueryParams) =>
-    apiClient.get<PaginatedResponse<MeterReading>>('/meter-readings', { params }).then((r) => r.data),
+    apiClient.get('/meter-readings', { params }).then((r) => unwrapList<MeterReading>(r.data)),
 
   getOne: (id: string) =>
-    apiClient.get<{ data: MeterReading }>(`/meter-readings/${id}`).then((r) => r.data.data),
+    apiClient.get(`/meter-readings/${id}`).then((r) => {
+      const b = r.data as Record<string, unknown>;
+      return (b?.data ?? b) as MeterReading;
+    }),
 
   create: (data: Partial<MeterReading> & { meterId?: string; connectionId?: string }) =>
-    apiClient.post<{ data: MeterReading }>('/meter-readings', data).then((r) => r.data.data),
+    apiClient.post('/meter-readings', data).then((r) => {
+      const b = r.data as Record<string, unknown>;
+      return (b?.data ?? b) as MeterReading;
+    }),
 
   approve: (id: string) => apiClient.post(`/meter-readings/${id}/approve`),
 

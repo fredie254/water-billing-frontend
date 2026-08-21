@@ -122,9 +122,8 @@ export const Arrears = () => {
       const params: Record<string, string | number | undefined> = { pageSize: 500 };
       if (q) params.search = q;
       if (bucket && bucket !== 'all') params.bucket = bucket === '90_plus' ? 'over_90' : bucket;
-      const res = await arrearsApi.list(params);
-      const raw = res?.data ?? res;
-      const rawAccounts: any[] = raw?.accounts ?? [];
+      const raw = await arrearsApi.list(params);
+      const rawAccounts: any[] = (raw?.accounts as any[]) ?? [];
       const rawSummary = raw?.summary ?? null;
 
       setAccounts(
@@ -144,13 +143,14 @@ export const Arrears = () => {
       );
 
       if (rawSummary) {
+        const s = rawSummary as Record<string, unknown>;
         setSummary({
-          current:  rawSummary.current ?? 0,
-          '1_30':   rawSummary['1_30'] ?? 0,
-          '31_60':  rawSummary['31_60'] ?? 0,
-          '61_90':  rawSummary['61_90'] ?? 0,
-          '90_plus': rawSummary['90_plus'] ?? rawSummary['over_90'] ?? 0,
-          total:    rawSummary.total ?? 0,
+          current:  (s.current  as number) ?? 0,
+          '1_30':   (s['1_30']  as number) ?? 0,
+          '31_60':  (s['31_60'] as number) ?? 0,
+          '61_90':  (s['61_90'] as number) ?? 0,
+          '90_plus': ((s['90_plus'] ?? s['over_90']) as number) ?? 0,
+          total:    (s.total    as number) ?? 0,
         });
       }
     } catch (err) {

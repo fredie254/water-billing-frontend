@@ -1,14 +1,18 @@
-﻿import { apiClient } from '@/core/api/client';
-import type { PaymentPlan, PaginatedResponse, QueryParams } from '@/types';
+﻿import { apiClient, unwrapList } from '@/core/api/client';
+import type { PaymentPlan, QueryParams } from '@/types';
 
 export const arrearsApi = {
+  // Returns { accounts: [...], summary: {...} } — not a paginated list
   list: (params?: QueryParams) =>
-    apiClient.get('/arrears', { params }).then((r) => r.data),
+    apiClient.get('/arrears', { params }).then((r) => {
+      const body = r.data as Record<string, unknown>;
+      return (body?.success !== undefined ? body.data : body) as Record<string, unknown>;
+    }),
 };
 
 export const paymentPlansApi = {
   list: (params?: QueryParams) =>
-    apiClient.get<PaginatedResponse<PaymentPlan>>('/payment-plans', { params }).then((r) => r.data),
+    apiClient.get('/payment-plans', { params }).then((r) => unwrapList<PaymentPlan>(r.data)),
 
   getOne: (id: string) =>
     apiClient.get<{ data: PaymentPlan }>(`/payment-plans/${id}`).then((r) => r.data.data),

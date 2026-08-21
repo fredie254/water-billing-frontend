@@ -1,9 +1,9 @@
-import { apiClient } from '@/core/api/client';
-import type { BillingPeriod, PaginatedResponse, QueryParams } from '@/types';
+import { apiClient, unwrapList } from '@/core/api/client';
+import type { BillingPeriod, QueryParams } from '@/types';
 
 export const billingPeriodsApi = {
   list: (params?: QueryParams) =>
-    apiClient.get<PaginatedResponse<BillingPeriod>>('/billing-periods', { params }).then((r) => r.data),
+    apiClient.get('/billing-periods', { params }).then((r) => unwrapList<BillingPeriod>(r.data)),
 
   getOne: (id: string) =>
     apiClient.get<{ data: BillingPeriod }>(`/billing-periods/${id}`).then((r) => r.data.data),

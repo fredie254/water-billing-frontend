@@ -1,21 +1,27 @@
-import { apiClient } from '@/core/api/client';
-import type { NotificationLog, NotificationTemplate, PaginatedResponse, QueryParams } from '@/types';
+import { apiClient, unwrapList } from '@/core/api/client';
+import type { NotificationLog, NotificationTemplate, QueryParams } from '@/types';
 
 export const notificationsApi = {
   list: (params?: QueryParams) =>
-    apiClient.get<PaginatedResponse<NotificationLog>>('/notifications', { params }).then((r) => r.data),
+    apiClient.get('/notifications', { params }).then((r) => unwrapList<NotificationLog>(r.data)),
 
   send: (data: { customerId: string; type: string; subject?: string; message: string }) =>
     apiClient.post('/notifications/send', data).then((r) => r.data),
 
   getTemplates: (params?: QueryParams) =>
-    apiClient.get<PaginatedResponse<NotificationTemplate>>('/notifications/templates', { params }).then((r) => r.data),
+    apiClient.get('/notifications/templates', { params }).then((r) => unwrapList<NotificationTemplate>(r.data)),
 
   createTemplate: (data: { name: string; type: string; event: string; subject?: string; body: string; isActive: boolean }) =>
-    apiClient.post<{ data: NotificationTemplate }>('/notifications/templates', data).then((r) => r.data.data),
+    apiClient.post('/notifications/templates', data).then((r) => {
+      const b = r.data as Record<string, unknown>;
+      return (b?.data ?? b) as NotificationTemplate;
+    }),
 
   updateTemplate: (id: string, data: { name?: string; type?: string; event?: string; subject?: string; body?: string; isActive?: boolean }) =>
-    apiClient.put<{ data: NotificationTemplate }>(`/notifications/templates/${id}`, data).then((r) => r.data.data),
+    apiClient.put(`/notifications/templates/${id}`, data).then((r) => {
+      const b = r.data as Record<string, unknown>;
+      return (b?.data ?? b) as NotificationTemplate;
+    }),
 
   getChannels: () =>
     apiClient.get('/notifications/channels').then((r) => r.data),
