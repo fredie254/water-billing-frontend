@@ -274,7 +274,7 @@ export const Readings = () => {
 
   // Fetch connections once for the record-reading form
   useEffect(() => {
-    connectionsApi.list({ pageSize: 500 })
+    connectionsApi.list({ pageSize: 100 })
       .then((r) => setConnections(r.data))
       .catch((err) => console.error('Failed to fetch connections:', err));
   }, []);

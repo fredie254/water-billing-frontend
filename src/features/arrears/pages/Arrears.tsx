@@ -119,7 +119,7 @@ export const Arrears = () => {
   const fetchArrears = useCallback(async (q?: string, bucket?: string) => {
     setLoadingArrears(true);
     try {
-      const params: Record<string, string | number | undefined> = { pageSize: 500 };
+      const params: Record<string, string | number | undefined> = { pageSize: 100 };
       if (q) params.search = q;
       if (bucket && bucket !== 'all') params.bucket = bucket === '90_plus' ? 'over_90' : bucket;
       const raw = await arrearsApi.list(params);

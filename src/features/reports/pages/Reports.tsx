@@ -88,7 +88,7 @@ export const Reports = () => {
   useEffect(() => {
     if (tab !== 'billing' || billsFetched) return;
     setLoadingBilling(true);
-    billsApi.list({ pageSize: 500 })
+    billsApi.list({ pageSize: 100 })
       .then(res => setBills(res.data ?? []))
       .catch(console.error)
       .finally(() => { setLoadingBilling(false); setBillsFetched(true); });
@@ -98,7 +98,7 @@ export const Reports = () => {
   useEffect(() => {
     if (tab !== 'metering' || metersFetched) return;
     setLoadingMetering(true);
-    metersApi.list({ pageSize: 500 })
+    metersApi.list({ pageSize: 100 })
       .then(res => setMeters(res.data ?? []))
       .catch(console.error)
       .finally(() => { setLoadingMetering(false); setMetersFetched(true); });
