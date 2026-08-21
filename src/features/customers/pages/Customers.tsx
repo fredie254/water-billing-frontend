@@ -8,6 +8,7 @@ import { ConfirmDialog } from '@/shared/components/ui/Modal';
 import { CustomerForm } from './CustomerForm';
 import { customersApi } from '@/features/customers/api/customers';
 import { formatCurrency, formatDate, cn } from '@/shared/utils/utils';
+import { extractError } from '@/core/api/client';
 import type { Customer, CustomerType } from '@/types';
 
 const CUSTOMER_TYPE_LABELS: Record<CustomerType, string> = {
@@ -39,10 +40,12 @@ export const Customers = () => {
   const [showForm,   setShowForm]     = useState(false);
   const [toToggle,   setToToggle]     = useState<Customer | null>(null);
   const [page,       setPage]         = useState(1);
+  const [fetchError, setFetchError]   = useState('');
   const PAGE_SIZE = 10;
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
+    setFetchError('');
     try {
       const params: Record<string, string | number> = {
         page,
@@ -56,7 +59,7 @@ export const Customers = () => {
       setCustomers(res.data);
       setTotal(res.pagination.total);
     } catch (err) {
-      console.error('Failed to fetch customers:', err);
+      setFetchError(extractError(err));
     } finally {
       setLoading(false);
     }
@@ -184,6 +187,12 @@ export const Customers = () => {
           <option value="suspended">Suspended</option>
         </select>
       </div>
+
+      {fetchError && (
+        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm">
+          <span className="font-semibold">Failed to load customers:</span> {fetchError}
+        </div>
+      )}
 
       <DataTable
         data={customers}
