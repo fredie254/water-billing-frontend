@@ -413,7 +413,7 @@ export const Users = () => {
     }
   };
 
-  const canManage = currentUser?.role === 'super_admin' || currentUser?.role === 'tenant_admin';
+  const canManage = ['super_admin', 'tenant_admin', 'manager'].includes(currentUser?.role ?? '');
 
   return (
     <div className="space-y-6">
