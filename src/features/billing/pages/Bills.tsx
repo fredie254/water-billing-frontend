@@ -554,7 +554,7 @@ export const Bills = () => {
                   </div>
                   <button
                     type="button"
-                    onClick={() => { setSelectedConn(null); setAcctQuery(''); setVal1('accountNumber', ''); }}
+                    onClick={() => { setSelectedConn(null); setAcctQuery(''); setVal1('accountNumber', '', { shouldValidate: false }); }}
                     className="p-1 text-gray-400 hover:text-red-500 flex-shrink-0"
                     title="Clear selection"
                   >
@@ -602,7 +602,7 @@ export const Bills = () => {
                           className="w-full text-left px-4 py-3 hover:bg-primary-50 border-b border-gray-100 last:border-0 transition-colors"
                           onMouseDown={() => {
                             setSelectedConn(conn);
-                            setVal1('accountNumber', conn.accountNumber ?? conn.id);
+                            setVal1('accountNumber', conn.accountNumber ?? conn.id, { shouldValidate: true });
                             setAcctDropdownOpen(false);
                             setAcctQuery('');
                           }}
@@ -626,8 +626,6 @@ export const Bills = () => {
               {err1.accountNumber && (
                 <p className="text-xs text-red-500 mt-1">{err1.accountNumber.message}</p>
               )}
-              {/* Hidden field to carry accountNumber value */}
-              <input type="hidden" {...reg1('accountNumber')} />
             </div>
 
             {/* ── Billing period: pick from existing periods OR enter manually ── */}
