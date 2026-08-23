@@ -1,6 +1,7 @@
 import axios from 'axios';
-import type { AxiosError } from 'axios';
+import type { AxiosError, AxiosResponse } from 'axios';
 import { useAuthStore } from '@/core/auth/authStore';
+import type { AuditAction } from '@/types';
 
 const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -141,3 +142,120 @@ export const extractError = (error: unknown): string => {
     'An unexpected error occurred'
   );
 };
+
+// ── Audit log interceptor ─────────────────────────────────────────────────────
+// Fires after the camelCase response interceptor so res.data is already converted.
+// Maps successful mutations → POST /audit-logs (fire-and-forget, never throws).
+
+type AuditPayload = {
+  action: AuditAction;
+  resource: string;
+  resourceId?: string;
+  resourceName?: string;
+  description: string;
+};
+
+type AuditPattern = [
+  method: string,
+  pathRegex: RegExp,
+  action: AuditAction,
+  resource: string,
+  describe: (pathParts: string[], data: Record<string, unknown>) => string,
+  getResourceName?: (data: Record<string, unknown>) => string | undefined,
+];
+
+const str = (v: unknown) => (v ? String(v) : undefined);
+
+const AUDIT_PATTERNS: AuditPattern[] = [
+  // Auth
+  ['POST', /^\/auth\/login$/,          'login',                'auth',         () => 'User logged in'],
+  ['POST', /^\/auth\/logout$/,         'logout',               'auth',         () => 'User logged out'],
+  // Users
+  ['POST', /^\/users$/,                'user_created',         'user',         (_, d) => `Created user: ${d.name ?? d.email ?? ''}`],
+  ['PUT',  /^\/users\/[^/]+$/,         'user_updated',         'user',         (_, d) => `Updated user: ${d.name ?? d.email ?? ''}`],
+  ['POST', /^\/users\/[^/]+\/activate$/,   'user_activated',   'user',         () => 'User activated'],
+  ['POST', /^\/users\/[^/]+\/deactivate$/, 'user_deactivated', 'user',         () => 'User deactivated'],
+  ['DELETE', /^\/users\/[^/]+$/,       'user_deleted',         'user',         () => 'User deleted'],
+  ['POST', /^\/users\/[^/]+\/reset-password$/, 'password_changed', 'user',    () => 'Password reset by admin'],
+  ['PUT',  /^\/auth\/change-password$/, 'password_changed',    'auth',         () => 'Password changed'],
+  // Customers
+  ['POST', /^\/customers$/,            'customer_created',     'customer',     (_, d) => `Created customer: ${d.name ?? ''}`,    (d) => str(d.name)],
+  ['PUT',  /^\/customers\/[^/]+$/,     'customer_updated',     'customer',     (_, d) => `Updated customer: ${d.name ?? ''}`,    (d) => str(d.name)],
+  ['DELETE', /^\/customers\/[^/]+$/,   'customer_deleted',     'customer',     () => 'Customer deleted'],
+  // Connections
+  ['POST', /^\/connections$/,          'connection_created',   'connection',   (_, d) => `Created connection: ${d.accountNumber ?? ''}`, (d) => str(d.accountNumber)],
+  ['PUT',  /^\/connections\/[^/]+$/,   'connection_updated',   'connection',   () => 'Connection updated'],
+  ['POST', /^\/connections\/[^/]+\/suspend$/,  'connection_suspended',  'connection', () => 'Connection suspended'],
+  ['POST', /^\/connections\/[^/]+\/activate$/, 'connection_activated',  'connection', () => 'Connection activated'],
+  ['POST', /^\/connections\/[^/]+\/disconnect$/, 'connection_suspended', 'connection', () => 'Connection disconnected'],
+  // Meters
+  ['POST', /^\/meters$/,               'meter_created',        'meter',        (_, d) => `Registered meter: ${d.serialNumber ?? ''}`, (d) => str(d.serialNumber)],
+  ['PUT',  /^\/meters\/[^/]+$/,        'meter_updated',        'meter',        (_, d) => `Updated meter: ${d.serialNumber ?? ''}`],
+  ['POST', /^\/meters\/[^/]+\/assign$/, 'meter_updated',       'meter',        () => 'Meter assigned to property'],
+  ['POST', /^\/meters\/[^/]+\/retire$/, 'meter_updated',       'meter',        () => 'Meter retired'],
+  // Readings
+  ['POST', /^\/meter-readings$/,       'reading_recorded',     'meter_reading', (_, d) => `Reading recorded: ${d.currentReading ?? d.readingValue ?? ''} m³`],
+  ['POST', /^\/meter-readings\/bulk$/, 'reading_recorded',     'meter_reading', () => 'Bulk readings recorded'],
+  // Bills
+  ['POST', /^\/bills$/,                'bill_generated',       'bill',         () => 'Bill generated'],
+  ['POST', /^\/bills\/[^/]+\/cancel$/, 'bill_cancelled',       'bill',         () => 'Bill cancelled'],
+  // Payments
+  ['POST', /^\/payments$/,             'payment_recorded',     'payment',      (_, d) => `Payment of ${d.amount ?? ''} recorded`],
+  ['POST', /^\/payments\/[^/]+\/reverse$/, 'payment_reversed', 'payment',      () => 'Payment reversed'],
+  // Tariffs
+  ['POST', /^\/tariffs$/,              'tariff_created',       'tariff',       (_, d) => `Created tariff: ${d.name ?? ''}`,       (d) => str(d.name)],
+  ['PUT',  /^\/tariffs\/[^/]+$/,       'tariff_updated',       'tariff',       (_, d) => `Updated tariff: ${d.name ?? ''}`],
+  // Settings
+  ['PUT',  /^\/settings$/,             'settings_updated',     'settings',     () => 'System settings updated'],
+  ['POST', /^\/settings$/,             'settings_updated',     'settings',     () => 'System settings updated'],
+];
+
+function detectAuditEntry(res: AxiosResponse): AuditPayload | null {
+  const method = (res.config.method ?? '').toUpperCase();
+  const raw = (res.config.url ?? '').replace(/\?.*$/, '').replace(/^\/api\/v1/, '');
+  const parts = raw.split('/').filter(Boolean);
+
+  for (const [pm, re, action, resource, describe, getName] of AUDIT_PATTERNS) {
+    if (pm !== method) continue;
+    if (!re.test(raw)) continue;
+
+    // Resource ID is typically the second segment when it's a UUID/slug
+    const UUID_RE = /^[0-9a-f-]{8,}$|^\d+$/i;
+    const resourceId = parts.length >= 2 && UUID_RE.test(parts[1]) ? parts[1] : undefined;
+
+    const body = (res.data as Record<string, unknown>);
+    const data = (body?.data ?? body) as Record<string, unknown>;
+
+    return {
+      action,
+      resource,
+      resourceId,
+      resourceName: getName?.(data),
+      description: describe(parts, data),
+    };
+  }
+  return null;
+}
+
+// Register as second response interceptor — runs after camelCase conversion
+apiClient.interceptors.response.use((res) => {
+  // Skip the audit-logs endpoint itself to prevent infinite loops
+  const url = res.config.url ?? '';
+  if (url.includes('/audit-logs')) return res;
+
+  const entry = detectAuditEntry(res);
+  if (!entry) return res;
+
+  const user = useAuthStore.getState().user;
+  if (!user) return res;
+
+  // Fire-and-forget — never blocks the original response
+  apiClient.post('/audit-logs', {
+    ...entry,
+    userId:   user.id,
+    userName: user.name,
+    userRole: user.role,
+  }).catch(() => {});
+
+  return res;
+});

@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/core/auth/authStore';
 import { authApi } from '@/features/auth/api/auth';
-import { extractError } from '@/core/api/client';
+import { apiClient, extractError } from '@/core/api/client';
 import type { UserRole } from '@/types';
 
 const ROLE_MAP: Record<string, UserRole> = {
@@ -65,6 +65,12 @@ export const Login = () => {
       navigate(user.role === 'customer' ? '/portal' : '/');
     } catch (err) {
       setError(extractError(err));
+      // Log failed login attempt — interceptor only fires on success
+      apiClient.post('/audit-logs', {
+        action: 'login_failed',
+        resource: 'auth',
+        description: `Failed login attempt for: ${data.email}`,
+      }).catch(() => {});
     }
   };
 
