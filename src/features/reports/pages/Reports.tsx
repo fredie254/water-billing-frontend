@@ -108,15 +108,14 @@ export const Reports = () => {
   // Re-fetch trend data whenever the period filter changes
   useEffect(() => {
     setLoadingTrends(true);
-    Promise.all([
+    Promise.allSettled([
       reportsApi.getRevenueTrend({ months: Number(period) }),
       reportsApi.getConsumptionTrend({ months: Number(period) }),
     ])
       .then(([revenue, consumption]) => {
-        setRevenueTrend(revenue);
-        setConsumptionTrend(consumption);
+        if (revenue.status === 'fulfilled') setRevenueTrend(revenue.value);
+        if (consumption.status === 'fulfilled') setConsumptionTrend(consumption.value);
       })
-      .catch(console.error)
       .finally(() => setLoadingTrends(false));
   }, [period]);
 

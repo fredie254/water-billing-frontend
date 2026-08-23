@@ -42,15 +42,14 @@ export const Dashboard = () => {
       .catch(console.error)
       .finally(() => setLoadingStats(false));
 
-    Promise.all([
+    Promise.allSettled([
       reportsApi.getRevenueTrend({ months: 8 }),
       reportsApi.getConsumptionTrend({ months: 8 }),
     ])
       .then(([revenue, consumption]) => {
-        setRevenueTrend(revenue);
-        setConsumptionTrend(consumption);
+        if (revenue.status === 'fulfilled') setRevenueTrend(revenue.value);
+        if (consumption.status === 'fulfilled') setConsumptionTrend(consumption.value);
       })
-      .catch(console.error)
       .finally(() => setLoadingCharts(false));
   }, []);
 

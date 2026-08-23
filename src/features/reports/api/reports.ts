@@ -1,15 +1,42 @@
 import { apiClient } from '@/core/api/client';
 import type { DashboardStats, RevenueDataPoint, ConsumptionDataPoint } from '@/types';
 
+function normalizeConsumption(raw: Record<string, unknown>): ConsumptionDataPoint {
+  return {
+    // API may return period, billing_month, month_label, or month
+    month: (raw.month ?? raw.period ?? raw.billingMonth ?? raw.monthLabel ?? raw.label ?? '') as string,
+    // API may return total_consumption, units_consumed, total_units, volume, or units
+    units: Number(raw.units ?? raw.totalConsumption ?? raw.unitsConsumed ?? raw.totalUnits ?? raw.consumption ?? raw.volume ?? 0),
+    connections: Number(raw.connections ?? raw.activeConnections ?? raw.totalConnections ?? 0),
+  };
+}
+
+function normalizeRevenue(raw: Record<string, unknown>): RevenueDataPoint {
+  return {
+    month: (raw.month ?? raw.period ?? raw.billingMonth ?? raw.label ?? '') as string,
+    revenue: Number(raw.revenue ?? raw.totalBilled ?? raw.billed ?? raw.totalRevenue ?? 0),
+    collected: Number(raw.collected ?? raw.totalCollected ?? raw.paid ?? 0),
+    outstanding: Number(raw.outstanding ?? raw.totalOutstanding ?? raw.balance ?? 0),
+  };
+}
+
 export const reportsApi = {
   getDashboardStats: () =>
     apiClient.get<{ data: DashboardStats }>('/reports/dashboard').then((r) => r.data.data),
 
   getRevenueTrend: (params?: { months?: number }) =>
-    apiClient.get<{ data: RevenueDataPoint[] }>('/reports/revenue-trend', { params }).then((r) => r.data.data),
+    apiClient.get('/reports/revenue-trend', { params }).then((r) => {
+      const raw = r.data as Record<string, unknown>;
+      const arr = (Array.isArray(raw.data) ? raw.data : Array.isArray(raw) ? raw : []) as Record<string, unknown>[];
+      return arr.map(normalizeRevenue);
+    }),
 
   getConsumptionTrend: (params?: { months?: number; zoneId?: string }) =>
-    apiClient.get<{ data: ConsumptionDataPoint[] }>('/reports/consumption-trend', { params }).then((r) => r.data.data),
+    apiClient.get('/reports/consumption-trend', { params }).then((r) => {
+      const raw = r.data as Record<string, unknown>;
+      const arr = (Array.isArray(raw.data) ? raw.data : Array.isArray(raw) ? raw : []) as Record<string, unknown>[];
+      return arr.map(normalizeConsumption);
+    }),
 
   getRevenueByZone: () =>
     apiClient.get('/reports/revenue-by-zone').then((r) => r.data),
