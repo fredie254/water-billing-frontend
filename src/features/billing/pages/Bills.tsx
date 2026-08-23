@@ -1,11 +1,11 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   FileText, Plus, Download, Send, Calendar, ChevronRight,
-  CheckCircle, AlertCircle, Clock, XCircle, Zap,
+  CheckCircle, AlertCircle, Clock, XCircle, Zap, Search, User, X,
 } from 'lucide-react';
 import { DataTable, type Column } from '@/shared/components/data-display/DataTable';
 import { Badge } from '@/shared/components/ui/Badge';
@@ -99,6 +99,14 @@ export const Bills = () => {
     previousReading: number;
   } | null>(null);
 
+  // Account search combobox state
+  const [acctQuery, setAcctQuery]               = useState('');
+  const [acctResults, setAcctResults]           = useState<Connection[]>([]);
+  const [acctSearching, setAcctSearching]       = useState(false);
+  const [selectedConn, setSelectedConn]         = useState<Connection | null>(null);
+  const [acctDropdownOpen, setAcctDropdownOpen] = useState(false);
+  const acctSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // New cycle modal
   const [showNewCycle, setShowNewCycle] = useState(false);
 
@@ -150,14 +158,19 @@ export const Bills = () => {
     handleSubmit: hs1,
     formState: { errors: err1 },
     reset: reset1,
+    setValue: setVal1,
   } = useForm<Step1Values>({ resolver: zodResolver(step1Schema) });
 
   const onStep1Submit = async (values: Step1Values) => {
     setWizardResolving(true);
     try {
-      const connRes = await connectionsApi.list({ search: values.accountNumber.trim(), pageSize: 1 });
-      const connection = connRes.data?.[0] ?? null;
-      if (!connection) { alert('Account number not found'); return; }
+      // Use the already-selected connection if available, otherwise fall back to search
+      let connection: Connection | null = selectedConn;
+      if (!connection) {
+        const connRes = await connectionsApi.list({ search: values.accountNumber.trim(), pageSize: 1 });
+        connection = connRes.data?.[0] ?? null;
+      }
+      if (!connection) { alert('Account number not found. Please search and select an account from the list.'); return; }
 
       const tariff = connection.tariffId
         ? await tariffsApi.getOne(connection.tariffId)
@@ -233,6 +246,9 @@ export const Bills = () => {
     setShowGenerate(false);
     setWizardStep(1);
     setWizardPreview(null);
+    setSelectedConn(null);
+    setAcctQuery('');
+    setAcctResults([]);
     reset1();
   };
 
@@ -515,26 +531,145 @@ export const Bills = () => {
       >
         {wizardStep === 1 && (
           <form id="step1-form" onSubmit={hs1(onStep1Submit)} className="space-y-4">
-            <Input
-              label="Account Number"
-              placeholder="e.g. ACC-001234"
-              {...reg1('accountNumber')}
-              error={err1.accountNumber?.message}
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Billing Period Start"
-                type="date"
-                {...reg1('billingPeriodStart')}
-                error={err1.billingPeriodStart?.message}
-              />
-              <Input
-                label="Billing Period End"
-                type="date"
-                {...reg1('billingPeriodEnd')}
-                error={err1.billingPeriodEnd?.message}
-              />
+
+            {/* ── Account search combobox ── */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Account <span className="text-red-500">*</span>
+              </label>
+
+              {selectedConn ? (
+                /* Selected account card */
+                <div className="flex items-start gap-3 p-3 bg-primary-50 border border-primary-200 rounded-xl">
+                  <User className="w-5 h-5 text-primary-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900">{selectedConn.customerName ?? '—'}</p>
+                    <p className="text-xs font-mono text-primary-700">{selectedConn.accountNumber}</p>
+                    {selectedConn.propertyAddress && (
+                      <p className="text-xs text-gray-500 truncate">{selectedConn.propertyAddress}</p>
+                    )}
+                    <p className="text-xs text-gray-400 capitalize mt-0.5">
+                      Status: <span className={cn(selectedConn.status === 'active' ? 'text-green-600' : 'text-red-500')}>{selectedConn.status}</span>
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedConn(null); setAcctQuery(''); setVal1('accountNumber', ''); }}
+                    className="p-1 text-gray-400 hover:text-red-500 flex-shrink-0"
+                    title="Clear selection"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                /* Search input + dropdown */
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={acctQuery}
+                    placeholder="Search by account number or customer name…"
+                    className="input-base pl-9 w-full"
+                    onChange={(e) => {
+                      const q = e.target.value;
+                      setAcctQuery(q);
+                      setAcctDropdownOpen(true);
+                      if (acctSearchRef.current) clearTimeout(acctSearchRef.current);
+                      if (!q.trim()) { setAcctResults([]); return; }
+                      acctSearchRef.current = setTimeout(async () => {
+                        setAcctSearching(true);
+                        try {
+                          const res = await connectionsApi.list({ search: q.trim(), pageSize: 10 });
+                          setAcctResults(res.data ?? []);
+                        } catch { setAcctResults([]); }
+                        finally { setAcctSearching(false); }
+                      }, 300);
+                    }}
+                    onFocus={() => acctQuery && setAcctDropdownOpen(true)}
+                    onBlur={() => setTimeout(() => setAcctDropdownOpen(false), 150)}
+                    autoComplete="off"
+                  />
+                  {acctDropdownOpen && (acctSearching || acctResults.length > 0 || acctQuery.trim()) && (
+                    <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-60 overflow-y-auto">
+                      {acctSearching ? (
+                        <div className="px-4 py-3 text-sm text-gray-400">Searching…</div>
+                      ) : acctResults.length === 0 ? (
+                        <div className="px-4 py-3 text-sm text-gray-400">No accounts found for "{acctQuery}"</div>
+                      ) : acctResults.map((conn) => (
+                        <button
+                          key={conn.id}
+                          type="button"
+                          className="w-full text-left px-4 py-3 hover:bg-primary-50 border-b border-gray-100 last:border-0 transition-colors"
+                          onMouseDown={() => {
+                            setSelectedConn(conn);
+                            setVal1('accountNumber', conn.accountNumber ?? conn.id);
+                            setAcctDropdownOpen(false);
+                            setAcctQuery('');
+                          }}
+                        >
+                          <p className="text-sm font-semibold text-gray-900">{conn.customerName ?? '—'}</p>
+                          <div className="flex items-center gap-3 mt-0.5">
+                            <span className="text-xs font-mono text-primary-700">{conn.accountNumber}</span>
+                            <span className={cn('text-xs px-1.5 py-0.5 rounded-full font-medium',
+                              conn.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                            )}>{conn.status}</span>
+                          </div>
+                          {conn.propertyAddress && (
+                            <p className="text-xs text-gray-400 truncate mt-0.5">{conn.propertyAddress}</p>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {err1.accountNumber && (
+                <p className="text-xs text-red-500 mt-1">{err1.accountNumber.message}</p>
+              )}
+              {/* Hidden field to carry accountNumber value */}
+              <input type="hidden" {...reg1('accountNumber')} />
             </div>
+
+            {/* ── Billing period: pick from existing periods OR enter manually ── */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Billing Period</label>
+              {periods.length > 0 && (
+                <select
+                  className="input-base w-full mb-2"
+                  defaultValue=""
+                  onChange={(e) => {
+                    const p = periods.find(p => p.id === e.target.value);
+                    if (p) {
+                      setVal1('billingPeriodStart', p.readingPeriodStart ?? p.billingDate ?? '');
+                      setVal1('billingPeriodEnd',   p.readingPeriodEnd   ?? p.dueDate     ?? '');
+                      setVal1('dueDate',             p.dueDate ?? '');
+                    }
+                  }}
+                >
+                  <option value="">— Select a billing cycle (or enter dates below) —</option>
+                  {periods.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.cycleType}) — due {p.dueDate ? formatDate(p.dueDate) : '—'}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Period Start"
+                  type="date"
+                  {...reg1('billingPeriodStart')}
+                  error={err1.billingPeriodStart?.message}
+                />
+                <Input
+                  label="Period End"
+                  type="date"
+                  {...reg1('billingPeriodEnd')}
+                  error={err1.billingPeriodEnd?.message}
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <Input
                 label="Current Reading (m³)"
