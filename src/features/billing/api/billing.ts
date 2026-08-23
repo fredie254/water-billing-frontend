@@ -1,6 +1,28 @@
 import { apiClient, unwrapList } from '@/core/api/client';
 import type { Bill, Connection, Tariff, QueryParams } from '@/types';
 
+// Shape returned by GET /invoices/form-data
+export interface InvoiceFormData {
+  accounts: Array<{
+    id: string;
+    accountNumber: string;
+    customerName: string;
+    customerId: string;
+    meterId?: string;
+    zoneId?: string;
+    connectionType?: string;
+  }>;
+  billingPeriods: Array<{
+    id: string;
+    name: string;
+    readingPeriodStart: string;
+    readingPeriodEnd: string;
+    billingDate?: string;
+    dueDate?: string;
+    status?: string;
+  }>;
+}
+
 export const billsApi = {
   list: (params?: QueryParams) =>
     apiClient.get('/invoices', { params }).then((r) => unwrapList<Bill>(r.data)),
@@ -8,8 +30,19 @@ export const billsApi = {
   getOne: (id: string) =>
     apiClient.get<{ data: Bill }>(`/invoices/${id}`).then((r) => r.data.data),
 
+  getFormData: () =>
+    apiClient.get('/invoices/form-data').then((r) => {
+      const body = r.data as Record<string, unknown>;
+      const d = (body?.data ?? body) as Record<string, unknown>;
+      return {
+        accounts:       (Array.isArray(d.accounts)       ? d.accounts       : []) as InvoiceFormData['accounts'],
+        billingPeriods: (Array.isArray(d.billingPeriods) ? d.billingPeriods : []) as InvoiceFormData['billingPeriods'],
+      } as InvoiceFormData;
+    }),
+
   generate: (data: {
     connectionId: string;
+    billingCycleId?: string;
     billingPeriodStart: string;
     billingPeriodEnd: string;
     currentReading?: number;
