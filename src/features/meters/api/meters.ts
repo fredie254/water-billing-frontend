@@ -1,5 +1,37 @@
 import { apiClient, unwrapList } from '@/core/api/client';
-import type { Meter, MeterReading, QueryParams } from '@/types';
+import type { Meter, MeterReading, MeterType, MeterStatus, QueryParams } from '@/types';
+
+function normalizeMeter(raw: Record<string, unknown>): Meter {
+  return {
+    id:                   raw.id as string,
+    tenantId:             (raw.tenantId ?? '') as string,
+    serialNumber:         (raw.serialNumber ?? '') as string,
+    meterNumber:          raw.meterNumber as string | undefined,
+    brand:                raw.brand as string | undefined,
+    model:                raw.model as string | undefined,
+    // API may return pipe_size, meter_size, or size
+    size:                 (raw.size ?? raw.pipeSize ?? raw.meterSize) as string | undefined,
+    type:                 (raw.type ?? 'mechanical') as MeterType,
+    status:               (raw.status ?? 'active') as MeterStatus,
+    propertyId:           raw.propertyId as string | undefined,
+    propertyAddress:      raw.propertyAddress as string | undefined,
+    customerId:           raw.customerId as string | undefined,
+    customerName:         raw.customerName as string | undefined,
+    installationLocation: raw.installationLocation as string | undefined,
+    installedAt:          raw.installedAt as string | undefined,
+    initialReading:       raw.initialReading != null ? Number(raw.initialReading) : undefined,
+    // API may return last_reading_value instead of last_reading
+    lastReading:          (raw.lastReading ?? raw.lastReadingValue) != null
+                            ? Number(raw.lastReading ?? raw.lastReadingValue)
+                            : undefined,
+    lastReadingDate:      raw.lastReadingDate as string | undefined,
+    calibrationDate:      raw.calibrationDate as string | undefined,
+    inspectionDate:       raw.inspectionDate as string | undefined,
+    replacedById:         raw.replacedById as string | undefined,
+    notes:                raw.notes as string | undefined,
+    createdAt:            (raw.createdAt ?? '') as string,
+  };
+}
 
 function normalizeReading(raw: Record<string, unknown>): MeterReading {
   return {
@@ -30,12 +62,15 @@ function normalizeReading(raw: Record<string, unknown>): MeterReading {
 
 export const metersApi = {
   list: (params?: QueryParams) =>
-    apiClient.get('/meters', { params }).then((r) => unwrapList<Meter>(r.data)),
+    apiClient.get('/meters', { params }).then((r) => {
+      const raw = unwrapList<Record<string, unknown>>(r.data);
+      return { ...raw, data: raw.data.map(normalizeMeter) };
+    }),
 
   getOne: (id: string) =>
     apiClient.get(`/meters/${id}`).then((r) => {
       const b = r.data as Record<string, unknown>;
-      return (b?.data ?? b) as Meter;
+      return normalizeMeter((b?.data ?? b) as Record<string, unknown>);
     }),
 
   create: (data: Partial<Meter>) =>
