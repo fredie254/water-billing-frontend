@@ -1,6 +1,10 @@
 import { apiClient, unwrapList } from '@/core/api/client';
 import type { Meter, MeterReading, MeterType, MeterStatus, QueryParams } from '@/types';
 
+const UNSET = new Set(['unassigned', 'n/a', 'none', '-', '']);
+const clean = (v: unknown) =>
+  typeof v === 'string' && !UNSET.has(v.toLowerCase().trim()) ? v : undefined;
+
 function normalizeMeter(raw: Record<string, unknown>): Meter {
   return {
     id:                   raw.id as string,
@@ -14,9 +18,9 @@ function normalizeMeter(raw: Record<string, unknown>): Meter {
     type:                 (raw.type ?? 'mechanical') as MeterType,
     status:               (raw.status ?? 'active') as MeterStatus,
     propertyId:           raw.propertyId as string | undefined,
-    propertyAddress:      raw.propertyAddress as string | undefined,
+    propertyAddress:      clean(raw.propertyAddress),
     customerId:           raw.customerId as string | undefined,
-    customerName:         raw.customerName as string | undefined,
+    customerName:         clean(raw.customerName),
     installationLocation: raw.installationLocation as string | undefined,
     installedAt:          raw.installedAt as string | undefined,
     initialReading:       raw.initialReading != null ? Number(raw.initialReading) : undefined,
