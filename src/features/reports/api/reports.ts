@@ -20,9 +20,27 @@ function normalizeRevenue(raw: Record<string, unknown>): RevenueDataPoint {
   };
 }
 
+function normalizeDashboardStats(raw: Record<string, unknown>): DashboardStats {
+  // Strip outer { success, data } envelope if present
+  const d = (raw?.success !== undefined ? raw.data : raw) as Record<string, unknown>;
+  return {
+    totalCustomers:      Number(d.totalCustomers      ?? d.customers        ?? d.customerCount     ?? 0),
+    activeConnections:   Number(d.activeConnections   ?? d.connections      ?? d.activeCount       ?? 0),
+    totalBillsIssued:    Number(d.totalBillsIssued    ?? d.billsIssued      ?? d.totalBills        ?? d.bills ?? 0),
+    totalRevenue:        Number(d.totalRevenue        ?? d.revenue          ?? d.monthlyRevenue    ?? d.totalBilled ?? d.billedAmount ?? 0),
+    outstandingBalance:  Number(d.outstandingBalance  ?? d.outstanding      ?? d.totalOutstanding  ?? d.balance ?? 0),
+    collectionRate:      Number(d.collectionRate      ?? d.collectionRatio  ?? d.paymentRate       ?? 0),
+    overdueAccounts:     Number(d.overdueAccounts     ?? d.overdue          ?? d.overdueCount      ?? 0),
+    readingsDueThisMonth:Number(d.readingsDueThisMonth?? d.readingsDue      ?? d.pendingReadings   ?? 0),
+  };
+}
+
 export const reportsApi = {
   getDashboardStats: () =>
-    apiClient.get<{ data: DashboardStats }>('/reports/dashboard').then((r) => r.data.data),
+    apiClient.get('/reports/dashboard').then((r) => {
+      const raw = r.data as Record<string, unknown>;
+      return normalizeDashboardStats(raw);
+    }),
 
   getRevenueTrend: (params?: { months?: number }) =>
     apiClient.get('/reports/revenue-trend', { params }).then((r) => {

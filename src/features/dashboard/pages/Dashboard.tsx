@@ -87,7 +87,7 @@ export const Dashboard = () => {
         />
         <StatCard
           title="Total Revenue (Aug)"
-          value={formatCurrency((stats?.totalRevenue ?? 0) / 12)}
+          value={formatCurrency(stats?.totalRevenue ?? 0)}
           icon={<DollarSign className="w-5 h-5" />}
           color="indigo"
           trend={{ value: 5.1, label: 'vs last month' }}
