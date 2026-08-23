@@ -164,6 +164,7 @@ export const Notifications = () => {
       key: 'eventType', header: 'Event',
       render: (r) => {
         const cfg = EVENT_CONFIG[r.eventType];
+        if (!cfg) return <span className="text-xs text-gray-400">{r.eventType ?? '—'}</span>;
         return (
           <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium', cfg.color)}>
             {cfg.label}
@@ -184,6 +185,7 @@ export const Notifications = () => {
       key: 'channel', header: 'Channel',
       render: (r) => {
         const cfg = CHANNEL_CONFIG[r.channel];
+        if (!cfg) return <span className="text-xs text-gray-400">{r.channel ?? '—'}</span>;
         return (
           <span className={cn('inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium', cfg.color)}>
             {cfg.icon} {cfg.label}
@@ -336,8 +338,8 @@ export const Notifications = () => {
             return (
               <div key={eventType} className="card overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-                  <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold', evtCfg.color)}>
-                    {evtCfg.label}
+                  <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold', evtCfg?.color ?? 'bg-gray-100 text-gray-700')}>
+                    {evtCfg?.label ?? eventType}
                   </span>
                   <span className="text-xs text-gray-400">{tmplList.length} template{tmplList.length > 1 ? 's' : ''}</span>
                 </div>
@@ -346,8 +348,8 @@ export const Notifications = () => {
                     const chCfg = CHANNEL_CONFIG[tmpl.channel];
                     return (
                       <div key={tmpl.id} className="px-4 py-3 flex items-start gap-3">
-                        <span className={cn('inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium flex-shrink-0 mt-0.5', chCfg.color)}>
-                          {chCfg.icon} {chCfg.label}
+                        <span className={cn('inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium flex-shrink-0 mt-0.5', chCfg?.color ?? 'bg-gray-100 text-gray-700')}>
+                          {chCfg?.icon} {chCfg?.label ?? tmpl.channel}
                         </span>
                         <div className="flex-1 min-w-0">
                           {tmpl.subject && (
@@ -423,7 +425,7 @@ export const Notifications = () => {
                   <div className="flex items-center gap-2">
                     {(['sms', 'email'] as NotificationChannel[]).map((ch) => {
                       const hasTemplate = templates.some((t) => t.eventType === evt && t.channel === ch && t.isActive);
-                      const chCfg = CHANNEL_CONFIG[ch];
+                      const chCfg = CHANNEL_CONFIG[ch] ?? { icon: null, label: ch, color: '' };
                       return (
                         <span
                           key={ch}
