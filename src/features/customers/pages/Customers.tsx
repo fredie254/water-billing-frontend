@@ -56,6 +56,7 @@ export const Customers = () => {
       if (statusFilter) params.status = statusFilter;
 
       const res = await customersApi.list(params);
+      console.log('[customers] first item:', JSON.stringify(res.data[0]));
       setCustomers(res.data);
       setTotal(res.pagination.total);
     } catch (err) {

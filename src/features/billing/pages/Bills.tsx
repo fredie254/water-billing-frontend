@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -100,14 +100,18 @@ export const Bills = () => {
   } | null>(null);
 
   // Form-data from /invoices/form-data
-  const [formData, setFormData]           = useState<InvoiceFormData | null>(null);
+  const [formData, setFormData]               = useState<InvoiceFormData | null>(null);
   const [formDataLoading, setFormDataLoading] = useState(false);
 
-  // Account combobox state (filters against pre-loaded formData.accounts)
+  // Account combobox state
   const [acctQuery, setAcctQuery]               = useState('');
   const [selectedConn, setSelectedConn]         = useState<InvoiceFormData['accounts'][0] | null>(null);
   const [acctDropdownOpen, setAcctDropdownOpen] = useState(false);
   const [selectedPeriodId, setSelectedPeriodId] = useState('');
+  // Live-search fallback (used when form-data has no accounts)
+  const [liveAcctResults, setLiveAcctResults]   = useState<Connection[]>([]);
+  const [liveSearching, setLiveSearching]       = useState(false);
+  const liveSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // New cycle modal
   const [showNewCycle, setShowNewCycle] = useState(false);
@@ -118,7 +122,7 @@ export const Bills = () => {
     try {
       const params: Record<string, unknown> = {
         page,
-        limit: PAGE_SIZE,
+        pageSize: PAGE_SIZE,
       };
       if (search) params.search = search;
       if (statusFilter !== 'all') params.status = statusFilter;
@@ -262,6 +266,7 @@ export const Bills = () => {
     setSelectedConn(null);
     setAcctQuery('');
     setSelectedPeriodId('');
+    setLiveAcctResults([]);
     reset1();
   };
 
@@ -575,7 +580,7 @@ export const Bills = () => {
                   </button>
                 </div>
               ) : (
-                /* Search + dropdown against pre-loaded accounts */
+                /* Search + dropdown — client-side if form-data loaded, live API otherwise */
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                   <input
@@ -583,7 +588,24 @@ export const Bills = () => {
                     value={acctQuery}
                     placeholder="Search by account number or customer name…"
                     className="input-base pl-9 w-full"
-                    onChange={(e) => { setAcctQuery(e.target.value); setAcctDropdownOpen(true); }}
+                    onChange={(e) => {
+                      const q = e.target.value;
+                      setAcctQuery(q);
+                      setAcctDropdownOpen(true);
+                      // Use live search when form-data has no accounts
+                      if ((formData?.accounts?.length ?? 0) === 0) {
+                        if (liveSearchTimer.current) clearTimeout(liveSearchTimer.current);
+                        if (!q.trim()) { setLiveAcctResults([]); return; }
+                        liveSearchTimer.current = setTimeout(async () => {
+                          setLiveSearching(true);
+                          try {
+                            const res = await connectionsApi.list({ search: q.trim(), pageSize: 10 });
+                            setLiveAcctResults(res.data ?? []);
+                          } catch { setLiveAcctResults([]); }
+                          finally { setLiveSearching(false); }
+                        }, 300);
+                      }
+                    }}
                     onFocus={() => setAcctDropdownOpen(true)}
                     onBlur={() => setTimeout(() => setAcctDropdownOpen(false), 150)}
                     autoComplete="off"
@@ -591,22 +613,40 @@ export const Bills = () => {
                   {acctDropdownOpen && (
                     <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-64 overflow-y-auto">
                       {(() => {
+                        const useFormData = (formData?.accounts?.length ?? 0) > 0;
                         const q = acctQuery.toLowerCase().trim();
-                        const filtered = (formData?.accounts ?? []).filter(a =>
-                          !q ||
-                          a.accountNumber.toLowerCase().includes(q) ||
-                          a.customerName.toLowerCase().includes(q)
-                        ).slice(0, 20);
-                        if (filtered.length === 0) {
-                          return <div className="px-4 py-3 text-sm text-gray-400">{q ? `No accounts match "${acctQuery}"` : 'No accounts available'}</div>;
+
+                        if (!useFormData && liveSearching) {
+                          return <div className="px-4 py-3 text-sm text-gray-400">Searching…</div>;
                         }
-                        return filtered.map((acct) => (
+
+                        // Build result list
+                        const items = useFormData
+                          ? (formData!.accounts).filter(a =>
+                              !q ||
+                              a.accountNumber.toLowerCase().includes(q) ||
+                              a.customerName.toLowerCase().includes(q)
+                            ).slice(0, 20).map(a => ({
+                              id: a.id, accountNumber: a.accountNumber,
+                              customerName: a.customerName, connectionType: a.connectionType,
+                            }))
+                          : liveAcctResults.map(c => ({
+                              id: c.id, accountNumber: c.accountNumber ?? '',
+                              customerName: c.customerName ?? '—', connectionType: c.connectionType,
+                            }));
+
+                        if (items.length === 0) {
+                          return <div className="px-4 py-3 text-sm text-gray-400">
+                            {q ? `No accounts match "${acctQuery}"` : 'Start typing to search accounts…'}
+                          </div>;
+                        }
+                        return items.map((acct) => (
                           <button
                             key={acct.id}
                             type="button"
                             className="w-full text-left px-4 py-3 hover:bg-primary-50 border-b border-gray-100 last:border-0 transition-colors"
                             onMouseDown={() => {
-                              setSelectedConn(acct);
+                              setSelectedConn({ ...acct, customerId: '', meterId: '', zoneId: '' });
                               setVal1('accountNumber', acct.accountNumber, { shouldValidate: true });
                               setAcctDropdownOpen(false);
                               setAcctQuery('');

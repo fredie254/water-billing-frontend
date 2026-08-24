@@ -871,6 +871,21 @@ export interface IoTDevice {
 }
 
 // ─── Report / Analytics ────────────────────────────────────────────────────────
+export interface DashboardRecentBill {
+  id: string;
+  billNumber: string;
+  customerName: string;
+  accountNumber: string;
+  billingPeriodStart: string;
+  billingPeriodEnd: string;
+  totalAmount: number;
+  amountPaid: number;
+  balance: number;
+  dueDate: string;
+  status: string;
+  issuedAt?: string;
+}
+
 export interface DashboardStats {
   totalCustomers: number;
   activeConnections: number;
@@ -880,6 +895,7 @@ export interface DashboardStats {
   collectionRate: number;
   overdueAccounts: number;
   readingsDueThisMonth: number;
+  recentBills: DashboardRecentBill[];
 }
 
 export interface RevenueDataPoint {

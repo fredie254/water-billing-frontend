@@ -1,5 +1,46 @@
 import { apiClient, unwrapList } from '@/core/api/client';
-import type { Bill, Connection, Tariff, QueryParams } from '@/types';
+import type { Bill, Connection, Tariff, QueryParams, BillStatus } from '@/types';
+
+function normalizeBill(raw: Record<string, unknown>): Bill {
+  return {
+    id:                 (raw.id ?? '') as string,
+    tenantId:           (raw.tenantId ?? '') as string,
+    connectionId:       (raw.connectionId ?? '') as string,
+    accountNumber:      (raw.accountNumber ?? raw.account ?? raw.accountNo) as string | undefined,
+    customerId:         (raw.customerId ?? '') as string,
+    customerName:       (raw.customerName ?? raw.customer) as string | undefined,
+    propertyId:         raw.propertyId as string | undefined,
+    propertyAddress:    raw.propertyAddress as string | undefined,
+    meterSerial:        raw.meterSerial as string | undefined,
+    tariffId:           raw.tariffId as string | undefined,
+    tariffName:         raw.tariffName as string | undefined,
+    billingCycleId:     raw.billingCycleId as string | undefined,
+    // API may return invoice_number, bill_no, invoice_no
+    billNumber:         (raw.billNumber ?? raw.invoiceNumber ?? raw.billNo ?? raw.invoiceNo ?? raw.number ?? '') as string,
+    billingPeriodStart: (raw.billingPeriodStart ?? raw.periodStart ?? raw.readingPeriodStart ?? '') as string,
+    billingPeriodEnd:   (raw.billingPeriodEnd   ?? raw.periodEnd   ?? raw.readingPeriodEnd   ?? '') as string,
+    dueDate:            (raw.dueDate ?? '') as string,
+    previousReading:    Number(raw.previousReading ?? 0),
+    currentReading:     Number(raw.currentReading  ?? 0),
+    unitsConsumed:      Number(raw.unitsConsumed    ?? raw.consumption ?? raw.units ?? 0),
+    consumptionCharge:  Number(raw.consumptionCharge ?? raw.waterCharge ?? raw.usageCharge ?? 0),
+    standingCharge:     Number(raw.standingCharge   ?? raw.fixedCharge  ?? 0),
+    sewerageCharge:     raw.sewerageCharge != null ? Number(raw.sewerageCharge) : undefined,
+    penalties:          Number(raw.penalties ?? raw.penaltyAmount ?? raw.penalty ?? 0),
+    adjustments:        Number(raw.adjustments ?? 0),
+    discounts:          raw.discounts != null ? Number(raw.discounts) : undefined,
+    vatRate:            raw.vatRate   != null ? Number(raw.vatRate)   : undefined,
+    vatAmount:          raw.vatAmount != null ? Number(raw.vatAmount) : undefined,
+    totalAmount:        Number(raw.totalAmount ?? raw.total ?? raw.amount ?? raw.invoiceAmount ?? 0),
+    amountPaid:         Number(raw.amountPaid  ?? raw.paid  ?? raw.paidAmount ?? 0),
+    // API may return outstanding_balance, amount_due, outstanding
+    balance:            Number(raw.balance ?? raw.outstandingBalance ?? raw.amountDue ?? raw.outstanding ?? raw.remainingBalance ?? 0),
+    status:             (raw.status ?? 'pending') as BillStatus,
+    issuedAt:           raw.issuedAt as string | undefined,
+    items:              (Array.isArray(raw.items) ? raw.items : []) as Bill['items'],
+    createdAt:          (raw.createdAt ?? '') as string,
+  };
+}
 
 // Shape returned by GET /invoices/form-data
 export interface InvoiceFormData {
@@ -25,10 +66,16 @@ export interface InvoiceFormData {
 
 export const billsApi = {
   list: (params?: QueryParams) =>
-    apiClient.get('/invoices', { params }).then((r) => unwrapList<Bill>(r.data)),
+    apiClient.get('/invoices', { params }).then((r) => {
+      const raw = unwrapList<Record<string, unknown>>(r.data);
+      return { ...raw, data: raw.data.map(normalizeBill) };
+    }),
 
   getOne: (id: string) =>
-    apiClient.get<{ data: Bill }>(`/invoices/${id}`).then((r) => r.data.data),
+    apiClient.get(`/invoices/${id}`).then((r) => {
+      const b = r.data as Record<string, unknown>;
+      return normalizeBill((b?.data ?? b) as Record<string, unknown>);
+    }),
 
   getFormData: () =>
     apiClient.get('/invoices/form-data').then((r) => {

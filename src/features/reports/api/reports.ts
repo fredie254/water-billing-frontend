@@ -1,5 +1,5 @@
 import { apiClient } from '@/core/api/client';
-import type { DashboardStats, RevenueDataPoint, ConsumptionDataPoint } from '@/types';
+import type { DashboardStats, DashboardRecentBill, RevenueDataPoint, ConsumptionDataPoint } from '@/types';
 
 function normalizeConsumption(raw: Record<string, unknown>): ConsumptionDataPoint {
   return {
@@ -20,9 +20,27 @@ function normalizeRevenue(raw: Record<string, unknown>): RevenueDataPoint {
   };
 }
 
+function normalizeRecentBill(raw: Record<string, unknown>): DashboardRecentBill {
+  return {
+    id:                 (raw.id ?? '') as string,
+    billNumber:         (raw.billNumber ?? raw.invoiceNumber ?? raw.billNo ?? '') as string,
+    customerName:       (raw.customerName ?? raw.customer ?? '') as string,
+    accountNumber:      (raw.accountNumber ?? raw.account ?? '') as string,
+    billingPeriodStart: (raw.billingPeriodStart ?? raw.periodStart ?? '') as string,
+    billingPeriodEnd:   (raw.billingPeriodEnd   ?? raw.periodEnd   ?? '') as string,
+    totalAmount:        Number(raw.totalAmount  ?? raw.total  ?? raw.amount ?? 0),
+    amountPaid:         Number(raw.amountPaid   ?? raw.paid   ?? 0),
+    balance:            Number(raw.balance      ?? raw.outstandingBalance ?? raw.amountDue ?? 0),
+    dueDate:            (raw.dueDate ?? '') as string,
+    status:             (raw.status ?? 'pending') as string,
+    issuedAt:           raw.issuedAt as string | undefined,
+  };
+}
+
 function normalizeDashboardStats(raw: Record<string, unknown>): DashboardStats {
   // Strip outer { success, data } envelope if present
   const d = (raw?.success !== undefined ? raw.data : raw) as Record<string, unknown>;
+  const rawBills = Array.isArray(d.recentBills) ? d.recentBills : [];
   return {
     totalCustomers:      Number(d.totalCustomers      ?? d.customers        ?? d.customerCount     ?? 0),
     activeConnections:   Number(d.activeConnections   ?? d.connections      ?? d.activeCount       ?? 0),
@@ -32,6 +50,7 @@ function normalizeDashboardStats(raw: Record<string, unknown>): DashboardStats {
     collectionRate:      Number(d.collectionRate      ?? d.collectionRatio  ?? d.paymentRate       ?? 0),
     overdueAccounts:     Number(d.overdueAccounts     ?? d.overdue          ?? d.overdueCount      ?? 0),
     readingsDueThisMonth:Number(d.readingsDueThisMonth?? d.readingsDue      ?? d.pendingReadings   ?? 0),
+    recentBills:         rawBills.map((b) => normalizeRecentBill(b as Record<string, unknown>)),
   };
 }
 

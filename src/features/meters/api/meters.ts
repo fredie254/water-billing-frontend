@@ -118,7 +118,17 @@ export const readingsApi = {
       return (b?.data ?? b) as MeterReading;
     }),
 
-  approve: (id: string) => apiClient.post(`/meter-readings/${id}/approve`),
+  approve: (id: string) =>
+    apiClient.post(`/meter-readings/${id}/approve`).then((r) => {
+      const b = r.data as Record<string, unknown>;
+      const d = (b?.data ?? b) as Record<string, unknown>;
+      return {
+        id:         (d.id ?? '') as string,
+        status:     (d.status ?? '') as string,
+        billNumber: (d.billNumber ?? d.bill_number ?? null) as string | null,
+        message:    (b.message ?? '') as string,
+      };
+    }),
 
   reject: (id: string, reason: string) =>
     apiClient.post(`/meter-readings/${id}/reject`, { reason }),

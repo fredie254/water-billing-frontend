@@ -10,7 +10,7 @@ import { reportsApi } from '@/features/reports/api/reports';
 import { formatCurrency, formatNumber, formatDate } from '@/shared/utils/utils';
 import { Badge } from '@/shared/components/ui/Badge';
 import { useNavigate } from 'react-router-dom';
-import type { DashboardStats, RevenueDataPoint, ConsumptionDataPoint, Bill } from '@/types';
+import type { DashboardStats, DashboardRecentBill, RevenueDataPoint, ConsumptionDataPoint } from '@/types';
 
 const ZONE_CONSUMPTION = [
   { zone: 'Zone A', units: 168400, connections: 480, color: '#0ea5e9' },
@@ -31,7 +31,7 @@ export const Dashboard = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [revenueTrend, setRevenueTrend] = useState<RevenueDataPoint[]>([]);
   const [consumptionTrend, setConsumptionTrend] = useState<ConsumptionDataPoint[]>([]);
-  const [recentBills] = useState<Bill[]>([]);
+  const recentBills: DashboardRecentBill[] = stats?.recentBills ?? [];
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingCharts, setLoadingCharts] = useState(true);
   const navigate = useNavigate();
@@ -285,9 +285,10 @@ export const Dashboard = () => {
               <tr>
                 <th>Bill #</th>
                 <th>Customer</th>
+                <th>Account</th>
                 <th>Period</th>
-                <th>Units (m³)</th>
                 <th>Amount</th>
+                <th>Paid</th>
                 <th>Status</th>
                 <th>Due Date</th>
               </tr>
@@ -297,16 +298,17 @@ export const Dashboard = () => {
                 <tr key={bill.id} className="hover:bg-gray-50">
                   <td className="font-medium text-primary-600">{bill.billNumber}</td>
                   <td>{bill.customerName}</td>
-                  <td>{new Date(bill.billingPeriodStart).toLocaleString('en-KE', { month: 'short', year: 'numeric' })}</td>
-                  <td>{bill.unitsConsumed.toFixed(1)}</td>
+                  <td className="text-xs font-mono text-gray-500">{bill.accountNumber}</td>
+                  <td>{bill.billingPeriodStart ? new Date(bill.billingPeriodStart).toLocaleString('en-KE', { month: 'short', year: 'numeric' }) : '—'}</td>
                   <td className="font-medium">{formatCurrency(bill.totalAmount)}</td>
+                  <td className={bill.amountPaid > 0 ? 'text-green-600 font-medium' : 'text-gray-400'}>{formatCurrency(bill.amountPaid)}</td>
                   <td><Badge label={bill.status} /></td>
                   <td>{formatDate(bill.dueDate)}</td>
                 </tr>
               ))}
               {recentBills.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center text-sm text-gray-400 py-6">No recent bills</td>
+                  <td colSpan={8} className="text-center text-sm text-gray-400 py-6">No recent bills</td>
                 </tr>
               )}
             </tbody>

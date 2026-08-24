@@ -245,8 +245,9 @@ export const Readings = () => {
   const [showPending, setShowPending] = useState(false);
   const [typeFilter,  setTypeFilter]  = useState<MeterReading['readingType'] | ''>('');
   const [showForm,    setShowForm]    = useState(false);
-  const [resolving,   setResolving]   = useState<MeterReading | null>(null);
-  const [resolveNote, setResolveNote] = useState('');
+  const [resolving,    setResolving]    = useState<MeterReading | null>(null);
+  const [resolveNote,  setResolveNote]  = useState('');
+  const [approvalMsg,  setApprovalMsg]  = useState<{ ok: boolean; text: string } | null>(null);
   const [page,        setPage]        = useState(1);
   const PAGE_SIZE = 12;
 
@@ -317,10 +318,15 @@ export const Readings = () => {
   };
 
   const handleValidate = async (id: string) => {
-    await readingsApi.approve(id);
+    const result = await readingsApi.approve(id);
     setResolving(null);
     setResolveNote('');
     fetchReadings();
+    const text = result.billNumber
+      ? `Reading approved — bill ${result.billNumber} generated and issued.`
+      : (result.message || 'Reading approved. No bill was generated.');
+    setApprovalMsg({ ok: true, text });
+    setTimeout(() => setApprovalMsg(null), 6000);
   };
 
   const FlagBadge = ({ reading }: { reading: MeterReading }) => {
@@ -428,6 +434,12 @@ export const Readings = () => {
 
   return (
     <div className="space-y-6">
+      {approvalMsg && (
+        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium ${approvalMsg.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+          {approvalMsg.text}
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Meter Readings</h1>

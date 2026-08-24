@@ -3,9 +3,17 @@ import type { Customer, QueryParams } from '@/types';
 
 const BASE = '/customers';
 
+function resolveConnectionCount(raw: Record<string, unknown>): number {
+  // Try every scalar count field the API might use (snake_case already camelCased by interceptor)
+  for (const key of ['connectionCount', 'totalConnections', 'connectionsCount', 'activeConnections']) {
+    if (raw[key] != null) return Number(raw[key]);
+  }
+  // Count the embedded connections array directly
+  if (Array.isArray(raw.connections)) return raw.connections.length;
+  return 0;
+}
+
 function normalizeCustomer(raw: Record<string, unknown>): Customer {
-  // Temporary: log first item to reveal actual field names from API
-  if (raw.id) console.debug('[customer raw]', JSON.stringify(raw));
   return {
     id:                 raw.id as string,
     tenantId:           (raw.tenantId ?? '') as string,
@@ -19,7 +27,7 @@ function normalizeCustomer(raw: Record<string, unknown>): Customer {
     address:            raw.address as string | undefined,
     customerType:       raw.customerType as Customer['customerType'],
     status:             (raw.status ?? 'active') as Customer['status'],
-    totalConnections:   raw.totalConnections != null ? Number(raw.totalConnections) : undefined,
+    totalConnections:   resolveConnectionCount(raw),
     outstandingBalance: raw.outstandingBalance != null ? Number(raw.outstandingBalance) : undefined,
     createdAt:          (raw.createdAt ?? '') as string,
   };
