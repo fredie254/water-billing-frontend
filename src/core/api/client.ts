@@ -75,9 +75,15 @@ apiClient.interceptors.response.use(
     return res;
   },
   (error: AxiosError) => {
-    // Only auto-logout on 401 Unauthorized — genuine auth failure
-    // 403 Forbidden may be a permissions issue on a specific resource (not a lost session)
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const body = error.response?.data as Record<string, unknown> | undefined;
+    const msg = String(body?.message ?? body?.detail ?? '').toLowerCase();
+
+    const isAuthFailure =
+      status === 401 ||
+      (status === 500 && (msg.includes('not authenticated') || msg.includes('not authorized') || msg.includes('invalid token') || msg.includes('token expired') || msg.includes('unauthorized')));
+
+    if (isAuthFailure) {
       useAuthStore.getState().logout();
       window.location.href = '/login';
     }
